@@ -6,20 +6,20 @@ Maze Learning - Individual Differences (MLINDIV) is an expansive project that em
    * fMRI
    * DSI
 
-3. **Behavioral
-4. **Head Direction
-5. **Dynamic Connectivity
+3. **Behavioral**
+4. **Head Direction**
+5. **Dynamic Connectivity**
    * Construct Dynamic Connectomes
    * Dynamic Graph Metrics Analysis
    * Individual Differences in Dynamic Metrics
 
-7. Connectome Predictive Modeling
+7. **Connectome Predictive Modeling**
    * Construct Dictionary-Learning Atlas
    * Split & Model Functions
    * Performance Analysis
    * Feature-Weight Mapping
 
-9. Hippocampal Subfields
-10. Diffusion Spectral Imaging
-11. Voxel-Based Morphometry
+9. **Hippocampal Subfields**
+10. **Diffusion Spectral Imaging**
+11. **Voxel-Based Morphometry**
 
