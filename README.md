@@ -28,7 +28,7 @@ Maze Learning - Individual Differences (MLINDIV) is an expansive project that em
 
 /mnt/chrastil/lab/data/MLINDIV/raw/rawData
 
-**Raw Behavioral Data [E-Prime]**
+**Raw Behavioral Data [E-Prime]** \n
 
 /mnt/chrastil/lab/data/MLINDIV/raw/raw_behav
 
