@@ -8,7 +8,7 @@ Maze Learning - Individual Differences (MLINDIV) is an expansive project that em
 
 ## 2. **Behavioral**
 
-## 3. **Head Direction**
+## 3. [**Head Direction**](https://github.com/spatialneuroscience/MLINDIV/tree/main/Head_Direction_Analyses)
    * Head Direction Behavioral Analysis
    * Head Direction Neural Analysis
 
