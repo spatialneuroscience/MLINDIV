@@ -13,6 +13,7 @@
 * [STEP2B MVPA Test](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Neural_Analysis/STEP2b_MVPA_Test.ipynb)
 * [STEP2C MVPA All Runs Subcor](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Neural_Analysis/STEP2c_MVPA_All_Runs_subcor.ipynb)
 * [STEP3 Beta Series Visualization Subcor](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Neural_Analysis/STEP3_Beta_Series_Visualization_subcor.ipynb)
+* [Path Direction MVPA Code File]()
 
 ## Segmentation 
 * [Verification of Atlas](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Neural_Analysis/Verification_of_Atlas)
