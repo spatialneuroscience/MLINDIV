@@ -23,7 +23,6 @@
 ## Maze Learning Behavioral Analysis
 * [Event File Extraction Code](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/Event_File_Extraction_Code)
 * [Translational Path Direction Extraction Code](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/Translational_Path_Direction_Extraction_Code)
-* [Translational Path Direction Event File](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/Translational_Path_Direction_Event_File)
 * [Adapt File](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/adapt_file.R)
 * [Betaseries Event Generator](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/betaseries_event_generator.R)
 * [Decision Making Direction Analysis](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/decision_making_direction_analysis.R)
