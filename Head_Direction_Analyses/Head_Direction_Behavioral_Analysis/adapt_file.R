@@ -1,1 +1,69 @@
+library(tidyverse)
+library(dplyr)
+library(here)
+source(here::here('mass_generator.R'))
+source(here::here('single_subject_file_generator.R'))
+source(here::here('exploration_file_generator.R'))
+source(here::here('test_file_generator.R'))
+source(here::here('direction.R'))
+source(here::here('betaseries_event_generator.R'))
+source(here::here('gridcat_event_generator.R'))
+
+## Step 1. load data
+mass <- read.csv("MLINDIV_behavioral_master_Dec30.csv", head = TRUE)
+trial_mass <- read.csv("MLINDIV_trial_master.csv", head = TRUE)
+
+mass <- filter(mass, mass$Subject != 113) # subject113 has two exploration1s and no exploration2, which needs to be fixed, so not process it for now.
+folder_name <- 'tmp_meta_file'
+
+# fix code. The explore2 of subject133 was misnamed under subject20.
+#mass <- mass %>% mutate(Subject = ifelse(Subject == 20 & Task_type == 1 & Finished.OnsetTime == 508903, 113, Subject))
+#write_csv(mass, 'MLINDIV_behavioral_master_Dec30.csv')
+
+useless_list <- c(4,15,23, 30, 40, 48, 51, 52, 79, 1, 75,76, 92, 113, 54)
+
+
+
+meta_generator(mass, trial_mass, folder_name, useless_list)
+
+## Step 2. Modify for BetaSeries analysis
+subj <- 33
+
+folder_raw = 'betaseries_event'
+unlink(folder_raw, recursive = TRUE) # delete folder
+
+dir.create(folder_raw)
+#folder_raw4 = 'betaseries_event_4s_delay'
+#dir.create(folder_raw4)
+#folder_raw6 = 'betaseries_event_6s_delay'
+#dir.create(folder_raw6)
+
+total_unique_list <- as.data.frame(unique(mass$Subject))
+names(total_unique_list) <- c('subj')
+total_unique_list <- filter(total_unique_list, !total_unique_list$subj %in% useless_list)
+
+for (i in total_unique_list$subj){
+  subj = i
+  print(i)
+  betaseries_event_raw(subj, 'tmp_meta_file', folder_raw, stationary_allo)
+}
+
+#betaseries_event_raw(subj, 'tmp_meta_file', folder_raw, translation_allo)
+#betaseries_event_raw(subj, 'meta_file', folder_raw4, translation_allo,4) # bad result ignore
+#betaseries_event_raw(subj, 'meta_file', folder_raw6, translation_allo,6) # bad result ignore
+
+
+## Step 3. Modify for GridCAT
+folder_grid = 'gridcat_event'
+unlink(folder_grid, recursive = TRUE) # delete folder
+dir.create(folder_grid) # create folder
+total_unique_list <- as.data.frame(unique(mass$Subject))
+names(total_unique_list) <- c('subj')
+total_unique_list <- filter(total_unique_list, !total_unique_list$subj %in% useless_list)
+
+for (i in total_unique_list$subj){
+  subj = i
+  gridcat_event_generator(subj, 'meta_file', folder_grid)
+}
+
 
