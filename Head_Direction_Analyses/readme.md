@@ -21,7 +21,7 @@
 * [ASHS Output of Hippocampal Volumes Data Sheet](https://github.com/sumneets/MLINDV/blob/main/Head_Direction_Analyses/Head_Direction_Neural_Analysis/ASHS_Output_of_Hippocampal_Volumes_Data_Sheet)
 
 ## Maze Learning Behavioral Analysis
-* [Event File Extraction Code](https://github.com/sumneets/MLINDV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/Event_File_Extraction_Code)
+* [Event File Extraction Code](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/Event_File_Extraction_Code)
 * [Translational Path Direction Extraction Code](https://github.com/sumneets/MLINDV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/Translational_Path_Direction_Extraction_Code)
 * [Translational Path Direction Event File](https://github.com/sumneets/MLINDV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/Translational_Path_Direction_Event_File)
 * [Adapt File](https://github.com/sumneets/MLINDV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/adapt_file.R)
@@ -30,7 +30,7 @@
 * [Direction](https://github.com/sumneets/MLINDV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/direction.R)
 * [Distance Matrices](https://github.com/sumneets/MLINDV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/distance_matrices.ipynb)
 * [Exploration File Generator](https://github.com/sumneets/MLINDV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/exploration_file_generator.R)
-* [Explore MLINDIV](https://github.com/sumneets/MLINDV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/Explore_MLINDIV.R)
+* [Explore MLINDIV.R](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/Explore_MLINDIV.R)
 * [Gridcat Event Generator](https://github.com/sumneets/MLINDV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/gridcat_event_generator.R)
 * [Mass Generator](https://github.com/sumneets/MLINDV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/mass_generator.R)
 * [Single Subject File Generator](https://github.com/sumneets/MLINDV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/single_subject_file_generator.R)
