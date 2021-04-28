@@ -31,8 +31,9 @@ Maze Learning - Individual Differences (MLINDIV) is an expansive project that em
 
 ## 7. **Diffusion Spectral Imaging**
 ## 8. **Voxel-Based Morphometry**
+## 9. **Old Analyses**
 
-## **MLINDIV Stored Files**
+## 10. **MLINDIV Stored Files**
 **Raw MRI Data**  
 /mnt/chrastil/lab/data/MLINDIV/raw/rawData
 
