@@ -21,7 +21,7 @@
 * [ASHS Code](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Neural_Analysis/ASHS_Code)
 * [ASHS Output of Hippocampal Volumes Data Sheet](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Neural_Analysis/ASHS_Output_of_Hippocampal_Volumes_Data_Sheet)
 
-## Maze Learning Behavioral Analysis
+## [Maze Learning Behavioral Analysis](https://github.com/spatialneuroscience/MLINDIV/tree/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis)
 * [Event File Extraction Code](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/Event_File_Extraction_Code)
 * [Translational Path Direction Extraction Code](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/Translational_Path_Direction_Extraction_Code)
 * [Adapt File](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis/adapt_file.R)
