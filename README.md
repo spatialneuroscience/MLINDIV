@@ -17,7 +17,7 @@ Maze Learning - Individual Differences (MLINDIV) is an expansive project that em
    * Dynamic Graph Metrics Analysis
    * Individual Differences in Dynamic Metrics
 
-## 5. **Connectome Predictive Modeling**
+## 5. [**Connectome Predictive Modeling**](https://github.com/spatialneuroscience/MLINDIV/tree/main/CPM)
    * Construct Dictionary-Learning Atlas
    * Split & Model Functions
    * Performance Analysis
