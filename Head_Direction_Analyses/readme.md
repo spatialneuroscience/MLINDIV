@@ -1,6 +1,6 @@
 # Head Direction Signal Analysis
 
-## Maze Learning Neural Analysis
+## [Maze Learning Neural Analysis](https://github.com/spatialneuroscience/MLINDIV/tree/main/Head_Direction_Analyses/Head_Direction_Neural_Analysis)
 * [Raw Data for MVPA Analysis](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Neural_Analysis/Raw_Data_for_MVPA_Analysis)
 * [Atlas Folder](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Neural_Analysis/Atlas_Folder)
 * [Beta Series Data Folder](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Neural_Analysis/Beta_Series_Data_Folder)
