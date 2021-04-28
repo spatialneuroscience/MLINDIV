@@ -1,18 +1,19 @@
-# Maze_Learning_Behavior
-Codes to extract different types of events based on behavioral master file
+## Maze_Learning_Behavior
+#Codes to extract different types of events based on behavioral master file
+#Data paths for different event files
 
 Event file extraction code: https://github.com/LilianYou/Maze_Learning_Behavior/blob/master/MLINDIV_Behav_Generator/adapt_file.R
-
+<Br>
 Translational path direction extraction code: https://github.com/LilianYou/Maze_Learning_Behavior/blob/master/MLINDIV_Behav_Generator/betaseries_event_generator.R
-
+<Br>
 All events: /mnt/chrastil/lab/users/lily/MLINDIV_Behavior/all_events
-
+<Br>
 Stationary phase direction allocentric (NSWE): /mnt/chrastil/lab/users/lily/MLINDIV_Behavior/decision_making_allo
-
+<Br>
 Stationary phase direction egocentric (Left-Right): /mnt/chrastil/lab/users/lily/MLINDIV_Behavior/decision_making_ego
-
+<Br>
 Translation phase direction (NSWE): /mnt/chrastil/lab/users/lily/MLINDIV_Behavior/translation_movement
-
+<Br>
 Rotation phase direction allocentric (NSWE): /mnt/chrastil/lab/users/lily/MLINDIV_Behavior/turning_allo
-
+<Br>
 Rotation phase direction egocentric (Left-Right): /mnt/chrastil/lab/users/lily/MLINDIV_Behavior/turning_ego
