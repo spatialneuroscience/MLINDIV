@@ -10,7 +10,7 @@ Translational path direction extraction code: https://github.com/LilianYou/Maze_
 <Br>
 <Br>
 <Br>
-Data paths for different event files“**” 
+"*Data paths for different event files*"
 <Br>
 <Br>
 All events: /mnt/chrastil/lab/users/lily/MLINDIV_Behavior/all_events
