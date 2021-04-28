@@ -1,6 +1,6 @@
 # Maze_Learning_Behavior 
 
-_Codes to extract different types of events based on behavioral master file_
+__Codes to extract different types of events based on behavioral master file__
 <Br>
 <Br>
 Event file extraction code: https://github.com/LilianYou/Maze_Learning_Behavior/blob/master/MLINDIV_Behav_Generator/adapt_file.R
