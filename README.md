@@ -24,6 +24,11 @@ Maze Learning - Individual Differences (MLINDIV) is an expansive project that em
    * Feature-Weight Mapping
 
 ## 6. **Hippocampal Subfields**
+* [Verification of Atlas](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Neural_Analysis/Verification_of_Atlas)
+* [Young Adult Princeton 3T Atlas](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Neural_Analysis/Young_Adult_Princeton_3T_Atlas)
+* [ASHS Code](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Neural_Analysis/ASHS_Code)
+* [ASHS Output of Hippocampal Volumes Data Sheet](https://github.com/spatialneuroscience/MLINDIV/blob/main/Head_Direction_Analyses/Head_Direction_Neural_Analysis/ASHS_Output_of_Hippocampal_Volumes_Data_Sheet)
+
 ## 7. **Diffusion Spectral Imaging**
 ## 8. **Voxel-Based Morphometry**
 
