@@ -1,6 +1,6 @@
-## Maze_Learning_Behavior 
+# Maze_Learning_Behavior 
 <Br>
-Codes to extract different types of events based on behavioral master file
+##Codes to extract different types of events based on behavioral master file
 <Br>
 <Br>
 Event file extraction code: https://github.com/LilianYou/Maze_Learning_Behavior/blob/master/MLINDIV_Behav_Generator/adapt_file.R
@@ -8,7 +8,7 @@ Event file extraction code: https://github.com/LilianYou/Maze_Learning_Behavior/
 Translational path direction extraction code: https://github.com/LilianYou/Maze_Learning_Behavior/blob/master/MLINDIV_Behav_Generator/betaseries_event_generator.R
 <Br>
 <Br>
-Data paths for different event files
+##Data paths for different event files
 <Br>
 <Br>
 All events: /mnt/chrastil/lab/users/lily/MLINDIV_Behavior/all_events
