@@ -12,7 +12,7 @@ Maze Learning - Individual Differences (MLINDIV) is an expansive project that em
    * [Head Direction Behavioral Analysis](https://github.com/spatialneuroscience/MLINDIV/tree/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis)
    * [Head Direction Neural Analysis](https://github.com/spatialneuroscience/MLINDIV/tree/main/Head_Direction_Analyses/Head_Direction_Neural_Analysis)
 
-## 4. **Dynamic Connectivity**
+## 4. [**Dynamic Connectivity**](https://github.com/spatialneuroscience/MLINDIV/tree/main/Dyn-Conn)
    * Construct Dynamic Connectomes
    * Dynamic Graph Metrics Analysis
    * Individual Differences in Dynamic Metrics
