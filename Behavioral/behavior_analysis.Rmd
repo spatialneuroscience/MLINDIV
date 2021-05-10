@@ -1,1 +1,866 @@
+Please email me (lawsonk1@uci.edu) if you need help with any of this or would like a run through!
+
+INITIAL GOALS
+Things we want to look at (correlate w accuracy)
+- correlate distance traveled/# button presses
+- time spent in the hallways vs at objects, # object visits
+- evenness of exploration, distribution of visits to each object
+did they take the same patterns in the test that they did in explore?
+  - match seq in explore to test
+improvement over the course of the test phase?
+quantify direct path, wander, known route
+are some objects easier to find than others?
+- what are the most common errors?
+  - is start or goal location what makes it hard?
+
+
+#load in packages
+```{r}
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(data.table)
+library(network)
+library(tidygraph)
+library(ggraph)
+library(igraph)
+library(networkD3)
+library(CINNA)
+library(umap)
+library(plotly)
+library(factoextra)
+```
+
+
+#read in data
+```{r}
+trial_data <- read.csv("MLINDIV_trial_master.csv")
+participant_data <- read.csv("MLINDIV_participant_master.csv")
+#subject 113 only has one exploration session recorded, and subject 40 didn't complete any of the trials, so I'm excluding those from "clean" datasets so that I don't have to do it over and over again later.  In some later chunks, I'll also have to exclude participants that only competed an odd # of trials, or not enough trials, but we don't have to do that now
+trial_data_clean <- trial_data %>% filter(!Subject == 113 &!Subject ==40) 
+participant_data_clean <- participant_data %>% filter(!Subject == 113 &!Subject ==40)
+```
+
+##define objects
+```{r}
+#list of all possible locations
+locations <- c('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', "Y", "Z")
+#which we then divide into objects or hallways.  This will help us later when we want to figure out how much time/# of visits each participant made to each location
+objects <- c('A', 'I', 'K', 'L', 'N', 'O', 'P', 'Y', 'W')
+hallways <- c('B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'M', 'Q', 'R', 'S', 'T', 'U', "V", 'X', "Z")
+
+#A=guitar
+#I=snowman
+#L=spaceship
+#K=lamp post
+#N=chicken
+#O=trophy
+#P=chair
+#Y=umbrella
+#W=cuckoo clock
+```
+
+#PARTICIPANT ERRORS
+Before getting into the real analysis, I'm going to do some sorting and counting.  First, splitting the cleaned trial dataset into wrong trials and exploration trials.  Next we'll count the total number of times that participants started and ended at each object to get a sense of the distribution of start + end locations, and then count the # of start + end locations in the wrong trials.  We can plot the frequency of errors for each start and end location, normalized by the total number of trials that started/ended at that location.  Finally, we'll paste together start and end locations to make a column called "route", which will be handy later
+
+##counting start + end errors
+```{r}
+#filter only trials that were wrong, and toss out trials that were less than 6 seconds (selecting at that point was probably a mistake) - the final filter is for trials that were meant to end at N, but actually ended at F facing south.  These are close enough to right that we're not marking them as wrong
+wrong_trials <- trial_data_clean %>% filter(accuracy == FALSE) %>% filter(trial_duration > 6000) %>% filter(! (EndAt == "N" & end_location == "F" & end_rotation =="S"))
+exploration <- trial_data_clean %>% filter(is.na(accuracy) == TRUE)
+
+#number of instances of trials starting and ending at each object
+total_occurances <- as.data.frame(table(trial_data_clean$StartAt))
+total_ends <- as.data.frame(table(trial_data_clean$EndAt))
+#and the number of instances of errors starting and ending at each object
+end_occurances <- as.data.frame(table(wrong_trials$EndAt))
+start_occurances <- as.data.frame(table(wrong_trials$StartAt))
+
+#combine the start and end points so we know the direction of the route
+wrong_trials$route <- do.call(paste, c(wrong_trials[c(23:24)], sep = "-"))
+routes <- as.data.frame(table(wrong_trials$route))
+#and while we're here let's find total route frequency 
+trial_data_clean$route<- do.call(paste, c(trial_data_clean[c(23:24)], sep = "-"))
+all_routes <- as.data.frame(table(trial_data_clean$route))
+all_routes <- all_routes[-c(41),]
+
+
+###NORMALIZE BY NUBER OF OCCURANCES
+#plot frequency of errors at each end point
+end_occurances %>%  ggplot(., aes(x = reorder(Var1, -Freq), Freq/total_ends$Freq, color=Var1)) +  geom_bar(stat="identity", fill="white") + theme_minimal() + xlab("Location") + ylab("Normalized error frequency")
+#most mistakes made when intending to end at P or Y
+
+#plot frequency of errors at each start point
+start_occurances %>%  ggplot(., aes(x = reorder(Var1, -Freq), Freq/total_occurances$Freq, color=Var1)) +  geom_bar(stat="identity", fill="white") + theme_minimal() + xlab("Location") + ylab("Normalized error frequency")
+#very little change depending on start point!
+
+#plot error by route - direction matters, also, we can change the error freq (Y) to be Freq/all_routes$Freq if we want to normalize by # occurances
+routes %>%  ggplot(., aes(y = Freq, x = reorder(Var1, -Freq), color=Var1)) +  geom_bar(stat="identity", fill="white") + theme_minimal() + xlab("Route") + ylab("Error frequency")+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+#people are most often wrong at N-Y aka chicken to umbrella and O-P and least often wrong at P-W aka chair to cuckoo clock and P-N
+```
+
+Now that we know how often participants make errors when starting/ending at a certain location, we can look into where participants actually end up when they're meant to go to a certain location.  All the actual endings will be in their own dataframes, but I listed the most common endings in comments for convenience 
+
+##actual endings
+```{r}
+p_end <- wrong_trials %>% filter(EndAt == "P")
+p_actual_endings <- as.data.frame(table(p_end$end_location))
+#most commonly end at Y then W
+y_end <- wrong_trials %>% filter(EndAt == "Y")
+y_actual_endings <- as.data.frame(table(y_end$end_location))
+#most commonly end at W
+a_end <- wrong_trials %>% filter(EndAt == "A")
+a_actual_endings <- as.data.frame(table(a_end$end_location))
+#most commonly end at L
+i_end <- wrong_trials %>% filter(EndAt == "I")
+i_actual_endings <- as.data.frame(table(i_end$end_location))
+#most commonly end at K then W then O
+l_end <- wrong_trials %>% filter(EndAt == "L")
+l_actual_endings <- as.data.frame(table(l_end$end_location))
+#mostly end at A
+k_end <- wrong_trials %>% filter(EndAt == "K")
+k_actual_endings <- as.data.frame(table(k_end$end_location))
+#most commonly end at O
+w_end <- wrong_trials %>% filter(EndAt == "W")
+w_actual_endings <- as.data.frame(table(w_end$end_location))
+#most frequently go to P
+n_end <- wrong_trials %>% filter(EndAt == "N")
+n_actual_endings <- as.data.frame(table(n_end$end_location))
+#typically end at F or W then P or E
+o_end <- wrong_trials %>% filter(EndAt == "O")
+o_actual_endings <- as.data.frame(table(o_end$end_location))
+#most commonly end at K
+```
+
+We know where participants are actually ending up now, but where do they go on the way?  The next chunk is made to find the number of times that participants went to their end goal but left and ended somewhere else.  These are NOT corrected for hallways, like if someone was at F facing S, that does not count as N.
+
+###pass thru end goal
+```{r}
+#how many times to participants go to their destination then turn around and leave?
+p_error_toP <- as.data.frame(p_end[p_end$paths %like% "P", ]) %>% transmute(end_location, end_rotation, select_made, trial_duration, paths)
+
+y_error_toY <- as.data.frame(y_end[y_end$paths %like% "Y", ]) %>% transmute(end_location, end_rotation, select_made, trial_duration, paths)
+
+a_error_toA <- as.data.frame(a_end[a_end$paths %like% "A", ]) %>% transmute(end_location, end_rotation, select_made, trial_duration, paths)
+
+i_error_toI <- as.data.frame(i_end[i_end$paths %like% "I", ]) %>% transmute(end_location, end_rotation, select_made, trial_duration, paths)
+
+l_error_toL <- as.data.frame(l_end[l_end$paths %like% "L", ]) %>% transmute(end_location, end_rotation, select_made, trial_duration, paths)
+
+k_error_toK <- as.data.frame(k_end[k_end$paths %like% "K", ]) %>% transmute(end_location, end_rotation, select_made, trial_duration, paths)
+
+w_error_toW <- as.data.frame(w_end[w_end$paths %like% "W", ]) %>% transmute(end_location, end_rotation, select_made, trial_duration, paths)
+
+o_error_toO <- as.data.frame(o_end[o_end$paths %like% "O", ]) %>% transmute(end_location, end_rotation, select_made, trial_duration, paths)
+```
+
+The last chunk in this section we'll look for a correlation between distance traveled in the explore phase (both in terms of path distance traveled and number of nodes) and accuracy.  There isn't a correlation between either of these and accuracy, but we do see a correlation between the 2 distance metrics, which is an indicator that there's not just something weird going on in the data
+###cor(explore distance, accuracy)
+```{r}
+#this dataframe sums the distance data from both exploration sessions for these metrics
+cor_df <- exploration %>% transmute(Subject, nodesturns_count, path_dist_trav) %>% gather("condition", "count", 2:3) %>% pivot_wider(names_from = condition, values_from = count, values_fn = sum) %>% mutate(accuracy = participant_data_clean$tm_accuracy) %>% filter(! Subject == 113)
+
+cor_df %>% ggplot(., aes(accuracy, path_dist_trav)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("% correct trials") + ylab("distance traveled in explore")
+
+cor_df %>% ggplot(., aes(accuracy, nodesturns_count)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("% correct trials") + ylab("nodes+turns in exploration")
+
+cor.test(cor_df$path_dist_trav, cor_df$accuracy)
+cor.test(cor_df$nodesturns_count, cor_df$accuracy)
+cor.test(cor_df$nodesturns_count, cor_df$path_dist_trav)
+```
+
+
+#ROUTE ASYMMETRY
+Here we'll be looking into whether some routes are asymmetrical and participants make more errors in one direction than the other.  In the first chunk we (inelegantly) find the frequency of errors for each route, in each direction.  At the end, we plot the differences between the directions for each route (e.g. (errors for A->I) - (errors for I-> A)) 
+##'reverse_route' and plot
+```{r}
+#some directions are harder than others - what are routes where direction matters?
+a_routes <-as.data.frame(routes[routes$Var1 %like% "A-", ]) %>% mutate("reverse" =as.data.frame(routes[routes$Var1 %like% "-A", ]))
+i_routes <- as.data.frame(routes[routes$Var1 %like% "I-", ]) %>% mutate("reverse" =as.data.frame(routes[routes$Var1 %like% "-I", ])) %>% filter(!Var1 %like% "A")
+k_routes <- as.data.frame(routes[routes$Var1 %like% "K-", ]) %>% mutate("reverse" =as.data.frame(routes[routes$Var1 %like% "-K", ])) %>% filter(!Var1 %like% "A") %>% filter(!Var1 %like% "I")
+l_routes <- as.data.frame(routes[routes$Var1 %like% "L-", ]) %>% mutate("reverse" =as.data.frame(routes[routes$Var1 %like% "-L", ])) %>% filter(!Var1 %like% "A") %>% filter(!Var1 %like% "I") %>% filter(!Var1 %like% "K")
+n_routes <- as.data.frame(routes[routes$Var1 %like% "N-", ]) %>% mutate("reverse" =as.data.frame(routes[routes$Var1 %like% "-N", ])) %>% filter(!Var1 %like% "A") %>% filter(!Var1 %like% "I") %>% filter(!Var1 %like% "K") %>% filter(!Var1 %like% "L")
+o_routes <- as.data.frame(routes[routes$Var1 %like% "O-", ]) %>% mutate("reverse" =as.data.frame(routes[routes$Var1 %like% "-O", ])) %>% filter(!Var1 %like% "A") %>% filter(!Var1 %like% "I") %>% filter(!Var1 %like% "K") %>% filter(!Var1 %like% "L") %>% filter(!Var1 %like% "N")
+p_routes <- as.data.frame(routes[routes$Var1 %like% "P-", ]) %>% mutate("reverse" =as.data.frame(routes[routes$Var1 %like% "-P", ])) %>% filter(!Var1 %like% "A") %>% filter(!Var1 %like% "I") %>% filter(!Var1 %like% "K") %>% filter(!Var1 %like% "L") %>% filter(!Var1 %like% "N") %>% filter(!Var1 %like% "O")
+w_routes <- as.data.frame(routes[routes$Var1 %like% "W-", ]) %>% mutate("reverse" =as.data.frame(routes[routes$Var1 %like% "-W", ])) %>% filter(!Var1 %like% "A") %>% filter(!Var1 %like% "I") %>% filter(!Var1 %like% "K") %>% filter(!Var1 %like% "L") %>% filter(!Var1 %like% "N") %>% filter(!Var1 %like% "O") %>% filter(!Var1 %like% "P")
+
+reverse_routes <- bind_rows(a_routes, i_routes, k_routes, l_routes, n_routes, o_routes, p_routes, w_routes) 
+reverse_routes$error_diff <- (reverse_routes$Freq - reverse_routes$reverse$Freq)
+#looks like greatest error differences are O-A > A-O, W-P > P-W, O-P > P-O, N-P > P-N
+
+
+ggplot(reverse_routes, aes(Var1, error_diff, color=Var1)) +  geom_bar(stat="identity", fill="white") + theme_minimal() + xlab("Route") + ylab("Differences in error frequency")+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=0.5))
+```
+
+Now knowing that some routes are asymmetrical, here we can see if some routes are harder in both directions by looking at the number of times participants were wrong in both directions on the same route.  It looks like some routes are harder, especially the longer ones, although the routes with lower double errors aren't necessarily easier and might instead be more asymmetrical
+###error dist, double error routes
+```{r}
+reverse_routes_for_bp <- reverse_routes %>% mutate(ID = c(1:36)) %>% transmute(Var1, reverse$Var1, ID) %>% gather(type, route, 1:2) %>% transmute(ID, route)
+wrong_trials_by_participant <- wrong_trials %>% transmute(Subject, route)
+
+error_dist <- merge(reverse_routes_for_bp, wrong_trials_by_participant, by = "route")
+
+error_dist$Subject <- as.numeric(error_dist$Subject)
+error_dist$ID <- as.numeric(error_dist$ID)
+
+
+all_error_dist <- data.frame(matrix(ncol = 3, nrow = 0))
+colnames(all_error_dist) <- c('Subject', 'Error_count', 'Route')
+
+for (i in error_dist$ID){
+  x <- error_dist %>% filter(error_dist$ID == i)
+  a <- as.data.frame(table(x$Subject))
+  names(a) <- c("Subject", "Error_count")
+  b <- a %>% mutate("Route" = i)
+  all_error_dist <- rbind(b, all_error_dist)
+}
+all_error_dist <- all_error_dist %>% distinct(., .keep_all = TRUE) 
+all_error_dist_doubles <- all_error_dist %>% filter(Error_count == 2)
+
+error_dist_sub <- as.data.frame(table(all_error_dist_doubles$Subject))
+names(error_dist_sub) <- c("subject", "Double_error_count")
+error_dist_sub$subject <- as.numeric(as.character(error_dist_sub$subject))
+
+error_dist_route <- as.data.frame(table(all_error_dist_doubles$Route))
+names(error_dist_route) <- c("ID", "Double_error_count")
+double_error_routes <- merge(reverse_routes_for_bp, error_dist_route, by = "ID")
+
+double_error_routes %>% distinct(ID, Double_error_count, .keep_all = TRUE) %>% ggplot(., aes(route, Double_error_count, color=route)) +  geom_bar(stat="identity", fill="white") + theme_minimal() + xlab("Route") + ylab("# Double error occurances")+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+What are the most common paths participants take for each route?  some routes have one obvious most common path, but other routes have 2+.  I found the 3 most common paths for each route, and it might be interesting to see if path length relative to the idea path length (efficiency) correlates with #times that path was selected
+##most common paths for each route
+```{r}
+correct_trials <- trial_data_clean %>% filter(accuracy == TRUE)
+common_paths <- data.frame(matrix(ncol =3, nrow = 0))
+
+for(i in correct_trials$route){
+  a <- correct_trials %>% filter(route == i)
+  b <- as.data.frame(table(a$paths))
+  b <- b %>% arrange(desc(Freq))
+  b <- as.data.frame(b[1:3,])
+  names(b) <- c('X1', 'X2')
+  c <- b %>% mutate(X3 = i)
+  common_paths <- rbind(c, common_paths)
+  common_paths <- common_paths %>% distinct(., .keep_all = TRUE)
+}
+```
+
+#IMPROVEMENT
+Did participants improve over the course of the test phase?  In the first chunk we'll compile p-values from the t test comparing participant's accuracy on the first half to the second.  because we're running a t-test, we have to exclude all participants who completed an odd number of trials, and it would exclude a ton of participants to take out all trials <6sec (or less than 2 nodes, whatever way you want to take out accidental selects) so I left those in here
+##indiv participant, by halves
+```{r}
+tdc <- trial_data_clean %>% arrange(times) %>% arrange(dates) %>% filter(! Subject %in% c(4, 23, 51, 30, 90))
+tdc$accuracy <- as.integer(as.logical(tdc$accuracy))
+
+improvement <- data.frame(matrix(ncol = 2, nrow = 0))
+names(improvement) <- c("p_value", "subject")
+
+for(i in tdc$Subject){
+  a <- tdc %>% transmute(Subject, accuracy) %>% filter(Subject == i) %>% filter(!is.na(accuracy))
+  b <- a %>% mutate(trial_ID = c(1:nrow(a)))
+  b1 <- b %>% filter(trial_ID %in% 1:(nrow(b)/2))
+  b2 <- b %>% filter(trial_ID %in% (nrow(b)/2+1):nrow(b))
+  
+  if (sd(b$accuracy) == 0) {
+    d <- as.data.frame(-999)
+  } else {
+    c <- t.test(b1$accuracy, b2$accuracy, paired = T)
+    d <- as.data.frame(c$p.value)
+  }
+  names(d) <- c("p_value")
+  e <- d %>% mutate(subject = i)
+  improvement <- rbind(e, improvement)
+  improvement <- improvement %>% distinct(., .keep_all = T)
+}
+```
+
+Here, we're looking at the group as a whole, instead of every individual participant but it's the same basic idea.  at the end of this chunk is a line with ggplot to graph this data (bar graph of average with every individual plotted as a point) and you could change that to replace the bar graph with geom_path to see how each individual changed from the first half to the second.
+##whole group, by halves
+```{r}
+group_improvement <- data.frame(matrix(ncol = 3, nrow = 0))
+names(group_improvement) <- c("first_half", "second_half", "subject")
+
+for(i in tdc$Subject){
+  a <- tdc  %>% transmute(Subject, accuracy) %>% filter(Subject == i) %>% filter(!is.na(accuracy)) 
+  b <- a %>% mutate(trial_ID = c(1:nrow(a)))
+  b1 <- b %>% filter(trial_ID %in% 1:(nrow(b)/2))
+  c <- as.data.frame(sum(b1$accuracy)/length(b1$Subject))
+  b2 <- b %>% filter(trial_ID %in% (nrow(b)/2+1):nrow(b))
+  d <- as.data.frame(sum(b2$accuracy)/length(b1$Subject))
+  e <- cbind(c, d)
+  names(e) <- c("first_half", "second_half")
+  f <- e %>% mutate(subject = i)
+  
+  group_improvement <- rbind(f, group_improvement)
+  group_improvement <- group_improvement %>% distinct(., .keep_all = T)
+}
+t.test(group_improvement$first_half, group_improvement$second_half, paired = T)
+
+group_improvement$subject <- as.character(group_improvement$subject)
+gi <- group_improvement %>% gather(half, n_correct, 1:2) %>% group_by(half) %>% summarise(n_correct = mean(n_correct))
+
+
+group_improvement %>% gather(half, n_correct, 1:2) %>% ggplot(., aes(half, n_correct)) + geom_jitter(aes(color = subject), width = 0.2, height=.05) +  geom_path(aes(color=subject)) + geom_bar(data = gi, stat = "identity", alpha = .3) + theme_minimal() + xlab("Half") + ylab("Rate correct")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5))
+```
+
+Same deal as the previous chunk but comparing the first 10 trials and final 10 trials instead of first half and second half.  ggplot graph at the end should look very similar as well.
+##group 1st 10 vs last 10
+```{r}
+group_improvement10 <- data.frame(matrix(ncol = 3, nrow = 0))
+names(group_improvement10) <- c("first10", "last10", "subject")
+
+for(i in tdc$Subject){
+  a <- tdc %>% transmute(Subject, accuracy) %>% filter(Subject == i) %>% filter(!is.na(accuracy))
+  b <- a %>% mutate(trial_ID = c(1:nrow(a)))
+  b1 <- b %>% filter(trial_ID %in% 1:10)
+  c <- as.data.frame(sum(b1$accuracy)/length(b1$Subject))
+  b2 <- b %>% filter(trial_ID %in% (nrow(b)-9):nrow(b))
+  d <- as.data.frame(sum(b2$accuracy)/length(b1$Subject))
+  e <- cbind(c, d)
+  names(e) <- c("first10", "last10")
+  f <- e %>% mutate(subject = i)
+  
+  group_improvement10 <- rbind(f, group_improvement10)
+  group_improvement10 <- group_improvement10 %>% distinct(., .keep_all = T)
+}
+t.test(group_improvement10$first10, group_improvement10$last10, paired = T)
+group_improvement10$subject <- as.character(group_improvement10$subject)
+
+gi10 <- group_improvement10 %>% gather(time, n_correct, 1:2) %>% group_by(time) %>% summarise(n_correct = mean(n_correct))
+
+group_improvement10 %>% gather(time, n_correct, 1:2) %>% ggplot(., aes(time, n_correct)) + geom_jitter(aes(color = subject), width = 0.2, height = 0.05) +geom_bar(data = gi10, stat = "identity", alpha = .3) +  geom_path(aes(color=subject)) + theme_minimal() + xlab("Time") + ylab("Rate correct")+ theme(axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5))
+```
+
+#OBJECT VISITS
+Where did all the participants go during the explore sessions and how many times did they go there?  the first chunk is counting all the visits by all participants during both of their explore sessions (I think that info is also in the participant dataset but not broken up into the separate sessions)
+##count all visits, obj vs hall
+```{r}
+explore_data <- trial_data_clean %>% filter(is.na(accuracy)) %>% transmute(Subject, paths)
+
+big_explore=as.data.frame(str_split_fixed(explore_data$paths," ",200))
+big_explore <- big_explore %>% mutate(subject = explore_data$Subject) %>% filter(!subject ==113)
+
+big_explore_counts <- data.frame(matrix(ncol = 0, nrow = 208))
+for (i in locations){
+  big_explore_counts$subject <- big_explore$subject
+  d <- as.data.frame(apply(big_explore,1,function(x) sum(x==i)))
+  names(d) <- i
+  big_explore_counts <- cbind(d, big_explore_counts)
+}
+
+big_explore_counts <- big_explore_counts %>% mutate(std = apply(big_explore_counts[1:26], 1, sd))
+```
+
+###split and counting in quarters
+Same idea as above.  sum of quarters may not add up to total because I'm just pretending that participants with an odd # of visits didn't go to their final visit so that the quarters are all the same size, because I had a hard time putting it all together without taking out those last odd visits.  At the bottom I assigned "real_Q" to be able to tell which quarter is which
+```{r}
+explore_data$ID <- c(1:208)
+quarter_explore_paths <- data.frame(matrix(ncol = 0, nrow = 416))
+
+for(i in explore_data$ID){
+  a <- str_count(explore_data$paths[i]," ")
+  b <- str_split_fixed(explore_data$paths[i]," ", (a+1))
+  
+  if (a%%2 == 0) {
+    c1 <- b[1:(a/2)]
+    d1 <- as.data.frame(c1)
+    c2 <- b[((a/2) + 1):a]
+    d2 <- as.data.frame(c2)
+  } else {
+    c1 <- b[1:((a-1)/2)]
+    d1 <- as.data.frame(c1)
+    c2 <- b[((a+1)/2):(a-1)]
+    d2 <- as.data.frame(c2)
+  }
+  e <- cbind(d1, d2)
+  e <- e%>% mutate(pos = c(1:nrow(e)))
+  f <- gather(e, quarter, count, 1:2)
+  g <- f %>% pivot_wider(values_from = count, names_from = pos) %>% mutate(subject = explore_data[i, 1])
+  quarter_explore_paths <- rbind.fill(g, quarter_explore_paths)
+  quarter_explore_paths <- quarter_explore_paths %>% distinct(., .keep_all = T) %>% filter(!is.na(subject))
+}
+
+quarter_explore_paths[is.na(quarter_explore_paths)] <- 0
+quarter_explore_counts <- data.frame(matrix(ncol = 0, nrow = 416))
+ for(z in locations){
+  quarter_explore_counts$quarter <-quarter_explore_paths$quarter
+  quarter_explore_counts$subject <-quarter_explore_paths$subject
+  h <- as.data.frame(apply(quarter_explore_paths,1,function(x) sum(x==z)))
+  names(h) <- z
+  quarter_explore_counts <- cbind(h, quarter_explore_counts)
+ }
+quarter_explore_counts$real_Q <- rep(c(3,4,1,2),times=104)
+```
+
+A little bit of gymnastics in this chunk to get this data all averaged for each participant (that's the point of the gather into pivot).  The first plot from this chunk is the distribution of visits to every object (this is NOT corrected for objects that are at the end of hallways, so like someone at F facing S does not count as a visit to N but maybe should), the second plot is the relationship between std of OBJECT visits only and accuracy, and there's also a correlation between #object visit std and accuracy.  we'll look at distribution of hallway and total location in the next chunks
+##evenness, distribution of visits
+```{r}
+object_visits <- big_explore_counts %>% transmute(subject, A, I, L, K, N, O, P, Y, W)
+hallway_visits <- big_explore_counts %>% transmute(subject, B, C, D, E, `F`, G, H, J, M, Q, R, S, `T`, U, V, X, Z)
+
+spread_obj_visits <- object_visits %>% gather("location", "count", 2:10) %>% pivot_wider(id_cols = subject, names_from = location, values_from = count, values_fn = sum)
+spread_obj_visits <- spread_obj_visits %>% mutate(std = apply(spread_obj_visits[2:10], 1, sd))
+
+flip_obj_visits <- object_visits %>% gather("location", "count", 2:10) %>% pivot_wider(id_cols = location, names_from = subject, values_from = count, values_fn = sum)
+
+total_visits <- as.data.frame(apply(spread_obj_visits[2:10],2,sum)) %>% mutate(sd = apply(spread_obj_visits[2:10],2,sd)) %>% mutate(location = flip_obj_visits$location) 
+
+total_visits %>% ggplot(., aes(location, `apply(spread_obj_visits[2:10], 2, sum)`, color=location)) + geom_bar(stat="identity", fill="white") + theme_minimal() + xlab("location") + ylab("total visits in explore")+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+cor_evenness_accuracy <- spread_obj_visits %>% transmute(subject, std) %>% mutate(accuracy = participant_data_clean$tm_accuracy)
+
+cor_evenness_accuracy %>% ggplot(., aes(accuracy, std)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("% correct trials") + ylab("std in exploration")+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+#correct for hallways
+cor.test(cor_evenness_accuracy$std, cor_evenness_accuracy$accuracy)
+```
+
+Same idea as before, still looking only at object visits, but now in quarters.  Correlation between evenness and accuracy is graphed for each quarter
+###evenness obj in quarters
+```{r}
+q1_obj_visits <- quarter_explore_counts[,c(2, 4, 11:13, 15, 16, 18, 26, 28)] %>% filter(quarter_explore_counts$real_Q == 1)
+q1_obj_visits <- q1_obj_visits %>% mutate(std = apply(q1_obj_visits[1:9], 1, sd)) %>% arrange(subject) %>% mutate(accuracy = participant_data_clean$tm_accuracy)
+cor.test(q1_obj_visits$std, participant_data_clean$tm_accuracy)
+q1_obj_visits %>% ggplot(., aes(accuracy, std)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("accuracy") + ylab("Q1 std")
+
+q2_obj_visits <- quarter_explore_counts[,c(2, 4, 11:13, 15, 16, 18, 26, 28)] %>% filter(quarter_explore_counts$real_Q == 2)
+q2_obj_visits <- q2_obj_visits %>% mutate(std = apply(q2_obj_visits[1:9], 1, sd)) %>% arrange(subject)%>% mutate(accuracy = participant_data_clean$tm_accuracy)
+cor.test(q2_obj_visits$std, participant_data_clean$tm_accuracy)
+q2_obj_visits %>% ggplot(., aes(accuracy, std)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("accuracy") + ylab("Q2 std")
+
+q3_obj_visits <- quarter_explore_counts[,c(2, 4, 11:13, 15, 16, 18, 26, 28)] %>% filter(quarter_explore_counts$real_Q == 3)
+q3_obj_visits <- q3_obj_visits %>% mutate(std = apply(q3_obj_visits[1:9], 1, sd)) %>% arrange(subject)%>% mutate(accuracy = participant_data_clean$tm_accuracy)
+cor.test(q3_obj_visits$std, participant_data_clean$tm_accuracy)
+q3_obj_visits %>% ggplot(., aes(accuracy, std)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("accuracy") + ylab("Q3 std")
+
+q4_obj_visits <- quarter_explore_counts[,c(2, 4, 11:13, 15, 16, 18, 26, 28)] %>% filter(quarter_explore_counts$real_Q == 4)
+q4_obj_visits <- q4_obj_visits %>% mutate(std = apply(q4_obj_visits[1:9], 1, sd)) %>% arrange(subject)%>% mutate(accuracy = participant_data_clean$tm_accuracy)
+cor.test(q4_obj_visits$std, participant_data_clean$tm_accuracy)
+q4_obj_visits %>% ggplot(., aes(accuracy, std)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("accuracy") + ylab("Q4 std")
+
+#is there a change in std over time?  get more or less even in the way you explore as you figure out which parts of the maze are important?
+t.test(q1_obj_visits$std, q2_obj_visits$std)
+```
+
+Same thing as the previous chunk but now hallways instead of objects
+###evenness hallways in Q
+```{r}
+q1_hall_visits <- quarter_explore_counts[,c(1, 3, 5:10, 14, 17, 19:25, 28)] %>% filter(quarter_explore_counts$real_Q == 1)
+q1_hall_visits <- q1_hall_visits %>% mutate(std = apply(q1_hall_visits[1:17], 1, sd)) %>% arrange(subject) %>% mutate(accuracy = participant_data_clean$tm_accuracy)
+cor.test(q1_hall_visits$std, participant_data_clean$tm_accuracy)
+q1_hall_visits %>% ggplot(., aes(accuracy, std)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("accuracy") + ylab("Q1 std")
+
+q2_hall_visits <- quarter_explore_counts[,c(1, 3, 5:10, 14, 17, 19:25, 28)] %>% filter(quarter_explore_counts$real_Q == 2)
+q2_hall_visits <- q2_hall_visits %>% mutate(std = apply(q2_hall_visits[1:17], 1, sd)) %>% arrange(subject) %>% mutate(accuracy = participant_data_clean$tm_accuracy)
+cor.test(q2_hall_visits$std, participant_data_clean$tm_accuracy)
+q2_hall_visits %>% ggplot(., aes(accuracy, std)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("accuracy") + ylab("Q1 std")
+
+q3_hall_visits <- quarter_explore_counts[,c(1, 3, 5:10, 14, 17, 19:25, 28)] %>% filter(quarter_explore_counts$real_Q == 3)
+q3_hall_visits <- q3_hall_visits %>% mutate(std = apply(q3_hall_visits[1:17], 1, sd)) %>% arrange(subject) %>% mutate(accuracy = participant_data_clean$tm_accuracy)
+cor.test(q3_hall_visits$std, participant_data_clean$tm_accuracy)
+q3_hall_visits %>% ggplot(., aes(accuracy, std)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("accuracy") + ylab("Q1 std")
+
+q4_hall_visits <- quarter_explore_counts[,c(1, 3, 5:10, 14, 17, 19:25, 28)] %>% filter(quarter_explore_counts$real_Q == 4)
+q4_hall_visits <- q4_hall_visits %>% mutate(std = apply(q4_hall_visits[1:17], 1, sd)) %>% arrange(subject) %>% mutate(accuracy = participant_data_clean$tm_accuracy)
+cor.test(q4_hall_visits$std, participant_data_clean$tm_accuracy)
+q4_hall_visits %>% ggplot(., aes(accuracy, std)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("accuracy") + ylab("Q1 std")
+
+```
+
+And now putting it all together for all object visits in quarters and again plotting each
+###evenness all, in Q
+```{r}
+q1_all_visits <- quarter_explore_counts[,c(1:26, 28)] %>% filter(quarter_explore_counts$real_Q == 1)
+q1_all_visits <- q1_all_visits %>% mutate(std = apply(q1_all_visits[1:26], 1, sd)) %>% arrange(subject) %>% mutate(accuracy = participant_data_clean$tm_accuracy)
+cor.test(q1_all_visits$std, participant_data_clean$tm_accuracy)
+q1_all_visits %>% ggplot(., aes(accuracy, std)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("accuracy") + ylab("Q1 std")
+
+q2_all_visits <- quarter_explore_counts[,c(1:26, 28)] %>% filter(quarter_explore_counts$real_Q == 2)
+q2_all_visits <- q2_all_visits %>% mutate(std = apply(q2_all_visits[1:26], 1, sd)) %>% arrange(subject) %>% mutate(accuracy = participant_data_clean$tm_accuracy)
+cor.test(q2_all_visits$std, participant_data_clean$tm_accuracy)
+q2_all_visits %>% ggplot(., aes(accuracy, std)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("accuracy") + ylab("Q2 std")
+
+q3_all_visits <- quarter_explore_counts[,c(1:26, 28)] %>% filter(quarter_explore_counts$real_Q == 3)
+q3_all_visits <- q3_all_visits %>% mutate(std = apply(q3_all_visits[1:26], 1, sd)) %>% arrange(subject) %>% mutate(accuracy = participant_data_clean$tm_accuracy)
+cor.test(q3_all_visits$std, participant_data_clean$tm_accuracy)
+q3_all_visits %>% ggplot(., aes(accuracy, std)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("accuracy") + ylab("Q3 std")
+
+q4_all_visits <- quarter_explore_counts[,c(1:26, 28)] %>% filter(quarter_explore_counts$real_Q == 4)
+q4_all_visits <- q4_all_visits %>% mutate(std = apply(q4_all_visits[1:26], 1, sd)) %>% arrange(subject) %>% mutate(accuracy = participant_data_clean$tm_accuracy)
+cor.test(q4_all_visits$std, participant_data_clean$tm_accuracy)
+q4_all_visits %>% ggplot(., aes(accuracy, std)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("accuracy") + ylab("Q4 std")
+```
+
+
+#SEQ TRIAL MATCHING
+This is where we start to categorize the way people tackle each trial.  Sequence trial matching means that I'm trying to see if a participant took the exact sequence taken in the trial while they were exploring.  It may be helpful later to look only at the nodes and take out times that participants rotate in place, but this chunk includes rotations in the explore session so the count of sequence trial matches may be stingy.  This first chunk takes ~1hr to run, so if you don't need to rerun the calculation, you can skip to line 524 to read in the csv of this info.  at the end of this chunk there's a correlation between # seq trial matches and accuracy, which is not graphed
+##long calc
+```{r}
+#set subject as numeric, then make sure trial_data is in the right order (according to time stamp) and assign an absolute ID 
+trial_data_clean$Subject <- as.numeric(trial_data_clean$Subject)
+trial_data_clean <- trial_data_clean %>% arrange(times) %>% arrange(dates)%>% mutate(absolute_ID= c(1:nrow(trial_data_clean)))  
+#first step is to make an empty dataframe that has the right number of rows
+match_seq_total <- data.frame(matrix(ncol = 5, nrow = 0))
+#and then in this series of for loops we first want to take every subject in our arranged and cleaned dataframe, and separate out 
+for (x in trial_data_clean$Subject){
+   explore <- trial_data %>% filter(Subject == x) %>% filter(is.na(accuracy) == T)
+    trials <- trial_data %>% filter(Subject == x) %>% filter(!is.na(accuracy)) %>% filter(trial_duration > 6000)
+    trial <- trials %>% mutate(trial_ID = c(1:nrow(trials)))
+    for (i in trial$trial_ID) {
+      a <- as.data.frame(str_detect(explore[1,19], trials[i, 19]))
+      b <- as.data.frame(str_detect(explore[2,19], trials[i, 19]))
+      c <- cbind(a, b)
+      names(c) <- c("explore_1", "explore_2")
+      d <- c %>% mutate("trial_ID" = i) %>% mutate("Subject" = trial[1, 8]) %>% mutate("absolute_ID" = trial[i, 1])
+     match_seq_total <- rbind(d, match_seq_total)
+     match_seq_total <- match_seq_total %>% distinct(., .keep_all = TRUE) 
+    }
+}
+
+write.csv(match_seq_total, file = "trial_to_exploration_sequence_matching_with_ABsID.csv")
+match_seq_total <- read.csv("trial_to_exploration_sequence_matching_with_ABsID.csv")
+
+match_seq_total$explore_1 <- as.integer(as.logical(match_seq_total$explore_1))
+match_seq_total$explore_2 <- as.integer(as.logical(match_seq_total$explore_2))
+match_seq_total$total_explore_count <- rowSums(match_seq_total[,2:3])
+
+match_seq_tidy <- match_seq_total %>% transmute(Subject, total_explore_count) %>% pivot_wider(names_from = Subject, values_from = total_explore_count, values_fn = sum) %>% gather(subject, explore_match_count)
+match_seq_tidy$subject <- as.numeric(match_seq_tidy$subject)
+participant_data_clean <- participant_data %>% filter(!Subject == 113 &! Subject == 40)
+match_seq_tidy <- match_seq_tidy %>% arrange(subject) %>% mutate(accuracy = participant_data_clean$tm_accuracy)
+cor.test(match_seq_tidy$explore_match_count, match_seq_tidy$accuracy)
+```
+Where did participants go during each trial?  this is the same set up as the first chunk in obect visits, and it's meant to so that we can later quantify whether participants were wandering during the trial
+##pass thru other objects
+```{r}
+wander_counts <- data.frame(matrix(ncol = 0, nrow = 4770))
+for (z in locations){
+    trials <- trial_data_clean %>% filter(!is.na(accuracy)) %>% filter(trial_duration > 6000)
+    trials <- trials %>% mutate(absolute_ID = c(1:nrow(trials)))
+    b <- as.data.frame(str_split_fixed(trials$paths," ",25))
+    c <- b %>% mutate(subject = trials$Subject, trial_ID = trials$absolute_ID)
+    d <- as.data.frame(apply(c,1,function(x) sum(x==z)))
+    names(d) <- z
+    wander_counts <- cbind(wander_counts,d)
+}
+wander_counts_total <- wander_counts %>% mutate(subject = c$subject, trial_ID = c$trial_ID) %>% mutate(trials[22:27])
+
+match_seq_total <- match_seq_total %>% arrange(absolute_ID)
+
+wander_counts_total <- wander_counts_total %>% mutate(explore_match = match_seq_total$total_explore_count, efficiency = (trials$path_dist_trav/trials$Path.Distance))
+
+wander_counts_total$accuracy <- as.numeric(as.logical(wander_counts_total$accuracy))
+cor.test(wander_counts_total$efficiency, wander_counts_total$accuracy)
+```
+
+I don't think this chunk defines "wander" well, but it labels any trial where a participant was at one location more than 3 times (either rotating in place or distinct visits) as a wander, then correlates wanders with efficiency, accuracy, and path length.  Would be better to count rotations and distinct visits separately (might have to use facing info for that?)
+##quantify wanders
+```{r}
+wander_counts_total <- wander_counts_total %>% mutate(wander = apply(wander_counts_total[,1:26],1,function(x) sum(as.numeric(x >3))))
+
+cor.test(wander_counts_total$wander, wander_counts_total$efficiency)
+cor.test(wander_counts_total$wander, wander_counts_total$accuracy)
+cor.test(wander_counts_total$wander, wander_counts_total$explore_match)
+```
+
+different ways to define flexibility but here we're calling it the way the number of sequence trial matches changes over time (i.e. is a participant more likely to sequence trial match at the beginning of the test phase than at the end?  does that indicate a strategy shift?)
+##flexibility
+```{r}
+match_seq_tidy <- match_seq_total %>% transmute(trial_ID, total_explore_count) %>% pivot_wider(names_from = trial_ID, values_from = total_explore_count, values_fn = sum) %>% gather(trial_ID, explore_match_count)
+match_seq_tidy$trial_ID <- as.numeric(match_seq_tidy$trial_ID)
+cor.test(match_seq_tidy$explore_match_count, match_seq_tidy$trial_ID)
+
+match_seq_tidy %>% ggplot(., aes(trial_ID, explore_match_count)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("Trial number") + ylab("# trial -> explore seq matches")+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+
+we can then use our measure of flexibility/strategy shifting and see if that correlates with accuracy (it does not)
+###cor(flexibility, accuracy) 
+```{r}
+subject_seq_matches <- data.frame(matrix(ncol = 2, nrow = 0))
+for (i in match_seq_total$Subject){
+  x <- match_seq_total %>% filter(match_seq_total$Subject == i)
+  a <- as.data.frame(cor(x$trial_ID, x$total_explore_count))
+  b <- a %>% mutate("ID" = i)
+  subject_seq_matches <- rbind(b, subject_seq_matches)
+}
+subject_seq_matches <- subject_seq_matches %>% distinct(., .keep_all = TRUE) %>% arrange(ID) %>% mutate("accuracy" = participant_data_clean$tm_accuracy)
+names(subject_seq_matches) <- c("flexibility", "subject", "accuracy")
+
+cor.test(subject_seq_matches$flexibility, subject_seq_matches$accuracy)
+subject_seq_matches %>% ggplot(., aes(accuracy, subject_seq_matches$flexibility)) + geom_point(stat="identity")+ geom_smooth(method = "lm", se = FALSE)+ theme_minimal() + xlab("Accuracy") + ylab("cor b/n trial ID and #matches")+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+Same deal as the above chunk, but looking at improvement instead of accuracy.  No relationship between flexibility and either improvement or accuracy, so seems like this strategy shift is not how participants improve over time
+###cor(flexibility, improvement)
+```{r}
+subject_seq_matches$flexibility[is.na(subject_seq_matches[,1])] <- 0
+
+improve_halves <- group_improvement %>% mutate(score = (1 - (first_half/second_half))) %>% arrange(subject) %>% filter(!is.na(score) & ! score == -Inf)
+improve_10 <- group_improvement10 %>% mutate(score = (1 - (first10/final10))) %>% arrange(subject) %>% filter(!is.na(score) & ! score == -Inf)
+
+subject_seq_matches_clean <- subject_seq_matches %>% filter(subject %in% improve_halves$subject)
+cor.test(improve_halves$score, subject_seq_matches_clean$flexibility)
+subject_seq_matches_clean <- subject_seq_matches %>% filter(subject %in% improve_10$subject)
+cor.test(improve_10$score, subject_seq_matches_clean$flexibility)
+```
+
+#GRAPH NETWORK
+This is where our maze gets turned into a network!  Hopefully the node_.csv files are in the same folder as this R markdown so they're easy to read in but if not, adjust the path to the csvs. this chunk will plot the network a few different ways, the first (and nicest) is a forcceNetwork where the size of each node is correlated to the betweenness centrality (# shortest routes that pass through the node, the higher the betweenness centrality the higher the information abt the network that node provides).  the next set of plots in yellow show off the different possible configurations  
+##basics
+```{r}
+nodes <- read.csv("node_IDs.csv")
+node_list <- read.csv("node_con_list.csv")
+node_adj_matrix <- read.csv("node_matrix.csv")
+node_adj_matrix <- node_adj_matrix[-c(1)]
+node_adj_matrix <- as.matrix(node_adj_matrix)
+
+routes_igraph <- graph_from_data_frame(d = node_list, vertices = nodes$ID, directed = F)
+routes_igraph <- graph_from_adjacency_matrix(node_adj_matrix, mode = "undirected", diag = F)
+routes_igraph_tidy <- as_tbl_graph(routes_igraph)
+nodes <- nodes %>% mutate(betweenness = betweenness(routes_igraph), degree_centrality = centr_degree(routes_igraph)[[1]])
+
+nodes_d3 <- mutate(nodes, ID = ID - 1)
+edges_d3 <- mutate(node_list, ï..source = ï..source - 1, target = target - 1)
+forceNetwork(Links = edges_d3, Nodes = nodes_d3, NodeID = "ï..location", Group = "type", opacity = 1, fontSize = 16, zoom = TRUE, Nodesize = 'betweenness')
+
+plot(routes_igraph)
+plot(routes_igraph, layout=layout_randomly, main="Random")
+plot(routes_igraph, layout=layout_in_circle, main="Circle")
+plot(routes_igraph, layout=layout_as_star, main="Star")
+plot(routes_igraph, layout=layout_as_tree, main="Tree")
+plot(routes_igraph, layout=layout_on_grid, main="Grid")
+```
+
+
+With basics taken care of above, we can see if there are differences between good and bad navigators in terms of how their distribution of location visits relates to the betweenness centrality of the location.  I picked the 5 best and 5 worst navigators by looking at their total % accuracy and the first two plots show the networks of the best and worst navigators respectively, and the last plot is the correlation between all participants #location visits and each location's betweenness centrality
+##best v worst nav graph
+```{r}
+best_nav_counts <- big_explore_counts %>% filter(subject %in% c(3, 33, 80, 82, 98)) %>% gather(location, count, 1:26) %>% transmute(location, count) %>% pivot_wider(names_from = location, values_from = count, values_fn = sum) %>% gather(location, count, 1:26) %>% arrange(location)
+
+worst_nav_counts <- big_explore_counts %>% filter(subject %in% c(44, 61, 96, 73, 76)) %>% gather(location, count, 1:26) %>% transmute(location, count) %>% pivot_wider(names_from = location, values_from = count, values_fn = sum) %>% gather(location, count, 1:26) %>% arrange(location)
+
+total_counts <- big_explore_counts %>% gather(location, count, 1:26) %>% transmute(location, count) %>% pivot_wider(names_from = location, values_from = count, values_fn = sum) %>% gather(location, count, 1:26) %>% arrange(location)
+
+nodes_d3 <- nodes_d3 %>% mutate(best_nav_visits = best_nav_counts$count, worst_nav_visits = worst_nav_counts$count, total_visits = total_counts$count)
+
+forceNetwork(Links = edges_d3, Nodes = nodes_d3, NodeID = "ï..location", Group = "type", opacity = 1, fontSize = 16, zoom = TRUE, Nodesize = 'best_nav_visits')
+forceNetwork(Links = edges_d3, Nodes = nodes_d3, NodeID = "ï..location", Group = "type", opacity = 1, fontSize = 16, zoom = TRUE, Nodesize = 'worst_nav_visits')
+
+cor.test(nodes_d3$betweenness, nodes_d3$best_nav_visits)
+cor.test(nodes_d3$betweenness, nodes_d3$worst_nav_visits)
+cor.test(nodes_d3$betweenness, nodes_d3$total_visits)
+
+nodes_d3 %>% ggplot(., aes(betweenness, total_visits)) + geom_point(stat="identity", aes(color = ï..location))+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("Betweenness Centrality") + ylab("Total # object visits")
+```
+
+
+Similar to the above chunk, but now looking at the relationship between #visits and betweenness centrality by quarter
+##cor(bet, #visits) by Q
+```{r}
+q1counts <- quarter_explore_counts %>% filter(real_Q == 1) %>% gather(location, count, 1:26) %>% transmute(location, count) %>% pivot_wider(names_from = location, values_from = count, values_fn = sum) %>% gather(location, count, 1:26) %>% arrange(location)
+
+q2counts <- quarter_explore_counts %>% filter(real_Q == 2) %>% gather(location, count, 1:26) %>% transmute(location, count) %>% pivot_wider(names_from = location, values_from = count, values_fn = sum) %>% gather(location, count, 1:26) %>% arrange(location)
+
+q3counts <- quarter_explore_counts %>% filter(real_Q == 3) %>% gather(location, count, 1:26) %>% transmute(location, count) %>% pivot_wider(names_from = location, values_from = count, values_fn = sum) %>% gather(location, count, 1:26) %>% arrange(location)
+
+q4counts <- quarter_explore_counts %>% filter(real_Q == 4) %>% gather(location, count, 1:26) %>% transmute(location, count) %>% pivot_wider(names_from = location, values_from = count, values_fn = sum) %>% gather(location, count, 1:26) %>% arrange(location)
+
+nodes_d3 <- nodes_d3 %>% mutate(Q1 = q1counts$count, Q2 = q2counts$count, Q3 = q3counts$count, Q4 = q4counts$count)
+
+cor.test(nodes_d3$betweenness, nodes_d3$Q1)
+cor.test(nodes_d3$betweenness, nodes_d3$Q2)
+cor.test(nodes_d3$betweenness, nodes_d3$Q3)
+cor.test(nodes_d3$betweenness, nodes_d3$Q4)
+```
+
+Here we're looking at the relationship between #visits and betweenness centrality (this relationship is called bet_visits here and in the next chunks) and accuracy, but there's no correlation
+###cor(betweenness, # visits) v accuracy 
+```{r}
+indiv_bet_visits <- data.frame(matrix(ncol =3, nrow = 0))
+names(indiv_bet_visits) <- c("p.value", "cor_value", "subject")
+for(i in big_explore_counts$subject){
+  a <- big_explore_counts %>% filter(subject == i) %>% gather(location, count, 1:26) %>% transmute(location, count) %>% pivot_wider(names_from = location, values_from = count, values_fn = sum) %>% gather(location, count, 1:26) %>% arrange(location)
+  b <- cor.test(nodes_d3$betweenness, a$count)
+  c <- as.data.frame(b$p.value)
+  d <- as.data.frame(b$estimate)
+  e <- c %>% mutate(cor_value = d$`b$estimate`, subject =i)
+  indiv_bet_visits <- rbind(e, indiv_bet_visits)
+  indiv_bet_visits <- indiv_bet_visits %>% distinct(., .keep_all = F) %>% arrange(subject)
+}
+cor.test(indiv_bet_visits$cor_value, participant_data_clean$tm_accuracy)
+```
+
+No overall relationship between bet_visits and accuracy, and here checking to see if there is one in halves of exploration (explore session 1 and 2).  Still nothing in the fist half, but looks much closer to a significant correlation in the second half.  Maybe everyone wanders the same way in the first session but then good and bad navigators start to behave differently?
+###cor(bet_visits, accuracy) in HALVES
+```{r}
+indiv_bet_visits_halves <- data.frame(matrix(ncol =3, nrow = 0))
+names(indiv_bet_visits_halves) <- c("first_half", "second_half", "subject")
+for(i in big_explore_counts$subject){
+  a <- big_explore_counts %>% filter(subject == i) 
+  a1 <- a[1,]
+  b <- a1 %>% gather(location, count, 1:26) %>% arrange(location)
+  a2 <- a[2,]
+  c <- a2 %>% gather(location, count, 1:26) %>% arrange(location)
+  d <- cor.test(b$count, nodes_d3$betweenness)
+  e <- cor.test(c$count, nodes_d3$betweenness)
+  f <- data.frame(d$estimate)
+  g <- f %>% mutate(second_half = e$estimate, subject = i)
+  indiv_bet_visits_halves <- rbind(g, indiv_bet_visits_halves)
+  indiv_bet_visits_halves <- indiv_bet_visits_halves %>% distinct(., .keep_all = F) %>% arrange(subject)
+}
+
+cor.test(indiv_bet_visits_halves$d.estimate, participant_data_clean$tm_accuracy)
+cor.test(indiv_bet_visits_halves$second_half, participant_data_clean$tm_accuracy)
+```
+
+Same thing as above but now in quarters, and again there are no significant correlations
+###cor(^) in quarters
+```{r}
+indiv_bet_visits_quarters <- data.frame(matrix(ncol =5, nrow = 0))
+names(indiv_bet_visits_quarters) <- c("Q1", "Q2", "Q3", "Q4", "subject")
+for(i in big_explore_counts$subject){
+  a <- quarter_explore_counts %>% filter(subject == i) 
+  a1 <- filter(a, real_Q =="1")
+  b <- a1 %>% gather(location, count, 1:26) %>% arrange(location)
+  a2 <- filter(a, real_Q =="2")
+  c <- a2 %>% gather(location, count, 1:26) %>% arrange(location)
+  a3 <- filter(a, real_Q =="3")
+  d <- a3 %>% gather(location, count, 1:26) %>% arrange(location)
+  a4 <- filter(a, real_Q =="4")
+  e <- a4 %>% gather(location, count, 1:26) %>% arrange(location)
+  f1 <- cor.test(b$count, nodes_d3$betweenness)
+  f2 <- cor.test(c$count, nodes_d3$betweenness)
+  f3 <- cor.test(d$count, nodes_d3$betweenness)
+  f4 <- cor.test(e$count, nodes_d3$betweenness)
+  h <- data.frame(f1$estimate)
+  names(h) <- "Q1"
+  i <- h %>% mutate(Q2 = f2$estimate, Q3 = f3$estimate, Q4 = f4$estimate, subject = i)
+  indiv_bet_visits_quarters <- rbind(i, indiv_bet_visits_quarters)
+  indiv_bet_visits_quarters <- indiv_bet_visits_quarters %>% distinct(., .keep_all = F) %>% arrange(subject)
+}
+
+cor.test(indiv_bet_visits_quarters$Q1, participant_data_clean$tm_accuracy)
+cor.test(indiv_bet_visits_quarters$Q2, participant_data_clean$tm_accuracy)
+cor.test(indiv_bet_visits_quarters$Q3, participant_data_clean$tm_accuracy)
+cor.test(indiv_bet_visits_quarters$Q4, participant_data_clean$tm_accuracy)
+```
+
+This is a fun chunk.  the random walk starts at each of the participant start points (B, E, T, or U) and then takes 180 random steps to simulate one explore session.  this is repeated 52 times to get 208 explore sessions, just like the participants.  The random walk had a higher standard deviation of location visits (less even exploration) but t.test supports no difference in total number of location visits between the random walk and participants.  the plot is the relationship between #visits and betweenness centrality, just like we looked at for participants
+##random walk
+```{r}
+random.walk <- data.frame(matrix(ncol = 180, nrow = 0))
+names(random.walk) <- c(1:180)
+start_points <- c(2, 5, 20, 21)
+counter <- 0
+
+while(counter < 52){
+  for(i in start_points){
+    a <- random_walk(graph = routes_igraph, start = i, steps = 180, stuck = "return")
+    b <- as.data.frame(t(as_ids(a)))
+    names(b) <- c(1:180)
+    random.walk <- rbind(b, random.walk)
+  }
+  counter <- counter +1
+}
+
+rw_counts <- data.frame(matrix(ncol = 0, nrow = 208))
+ for(z in locations){
+  h <- as.data.frame(apply(random.walk,1,function(x) sum(x==z)))
+  names(h) <- z
+  rw_counts <- cbind(h, rw_counts)
+ }
+
+rw_counts_total <- rw_counts %>% mutate(std = apply(rw_counts[1:26], 1, sd))
+
+t.test(rw_counts_total$std, big_explore_counts$std)
+
+
+rw_tidy <- rw_counts_total %>% gather(location, count, 1:26) %>% transmute(location, count) %>% pivot_wider(names_from = location, values_from = count, values_fn = sum) %>% gather(location, count, 1:26) %>% arrange(location) %>% mutate(betweenness = nodes$betweenness)
+
+cor.test(rw_tidy$count, nodes$betweenness)
+t.test(rw_tidy$count, nodes_d3$total_visits)
+
+rw_tidy %>% ggplot(., aes(betweenness, count)) + geom_point(stat="identity", aes(color = location))+ geom_smooth(method = "lm", se = T)+ theme_minimal() + xlab("Betweenness Centrality") + ylab("Total # object visits")
+```
+
+CINNA is a package that will let us look at the types of centrality that make the most sense for our network (connected, undirected).  This chunk will also let us visualize the types of centrality that account for the most variance according to PCA
+####CINNA
+```{r}
+proper_centralities(routes_igraph)
+pr_cent <- proper_centralities(routes_igraph)
+calc_cent <- calculate_centralities(routes_igraph, include  = pr_cent[1:7])
+pca_centralities(calc_cent)
+visualize_correlations(calc_cent,"pearson")
+```
+
+barycenter centrality is the centrality that apparently matches up best with our type of network according to the above PCA, and barycenter is very hightly correlated with betweenness centrality
+#####barycenter
+```{r}
+library(centiserve)
+barycenter_score <- as.data.frame(barycenter(routes_igraph, vids = V(routes_igraph)))
+
+cor.test(barycenter_score$`barycenter(routes_igraph, vids = V(routes_igraph))`, nodes_d3$betweenness)
+```
+
+#UMAP
+recommended reading: https://pair-code.github.io/understanding-umap/
+here we're looking to see whether we can get clusters of participants in either trial or explore sessions based on accuracy in the trials  this would mean that even though we haven't found one variable that correlates a measure of exploration with accuracy, there could be a combination of explore variables that would predict accuracy.  If you need to run this chunk multiple times, comment out line 812 so that you don't delete columns you care about (the first time you run it, it will delete columns that are entirely NAs for convenience later)
+##good vs bad in trial, explore
+```{r}
+participant_data_clean$category <- ifelse(participant_data_clean$tm_accuracy > 0.85, "good",ifelse(participant_data_clean$tm_accuracy < 0.35, "bad", "middle"))
+participant_data_clean$category <- as.factor(participant_data_clean$category)
+participant_data_clean <- participant_data_clean[-c(36, 44)]
+
+participant_umap <- umap(participant_data_clean[10:28], n_neighbors = 26, min_dist = 0.15)
+#plot(participant_umap[[1]], col=as.factor(participant_data_clean$category))
+data2.umap <- as.data.frame(participant_umap[[1]]) %>% mutate("category" = participant_data_clean$category)
+plot_ly(data2.umap, x = ~V1, y = ~V2, color = ~category)
+
+participant_umap <- umap(participant_data_clean[29:42], n_neighbors = 26, min_dist = 0.15)
+#plot(participant_umap[[1]], col=as.factor(participant_data_clean$category))
+data2.umap <- as.data.frame(participant_umap[[1]]) %>% mutate("category" = participant_data_clean$category)
+plot_ly(data2.umap, x = ~V1, y = ~V2, color = ~category)
+
+participant_umap <- umap(participant_data_clean[43:81], n_neighbors = 26, min_dist = 0.15)
+#plot(participant_umap[[1]], col=as.factor(participant_data_clean$category))
+data2.umap <- as.data.frame(participant_umap[[1]]) %>% mutate("category" = participant_data_clean$category)
+plot_ly(data2.umap, x = ~V1, y = ~V2, color = ~category)
+legend("bottomleft", legend = c("good", "bad", "middle"),lty = c(1), col = c("red", "black", "green"), lwd = 2)
+```
+
+Same as above, but now by quarter.  Last plot here is all navigators, with different colors by quarter to see if the quarters would cluster away from each other (they don't).  Feel free to change n_neighbors and min_dist to see how the plots change
+##good vs bad, explore quarter
+```{r}
+q1umap <- filter(quarter_explore_counts, real_Q == "1")
+q1umap <- umap(q1umap[1:25], n_neighbors = 28)
+plot(q1umap[[1]], col=as.factor(participant_data_clean$category))
+
+q2umap <- filter(quarter_explore_counts, real_Q == "2")
+q2umap <- umap(q2umap[1:25], n_neighbors = 28)
+plot(q2umap[[1]], col=as.factor(participant_data_clean$category))
+
+q3umap <- filter(quarter_explore_counts, real_Q == "3")
+q3umap <- umap(q3umap[1:25], n_neighbors = 28)
+plot(q3umap[[1]], col=as.factor(participant_data_clean$category))
+
+q4umap <- filter(quarter_explore_counts, real_Q == "4")
+q4umap <- umap(q4umap[1:25], n_neighbors = 28)
+plot(q4umap[[1]], col=as.factor(participant_data_clean$category))
+
+total_q_umap <- umap(quarter_explore_counts[1:25], n_neighbors = 28, min_dist = 0.25)
+plot(total_q_umap[[1]], col = as.factor((quarter_explore_counts$real_Q)))
+```
+
+This chunk is all for fun, run to see what the PCA for distribution of location visits in all quarters looks like in 3D
+#PCA
+```{r}
+library(rgl)
+pc <- princomp(quarter_explore_counts[,1:25], cor=TRUE, scores=TRUE)
+summary(pc)
+
+plot3d(pc$scores[,1:3], col = quarter_explore_counts$real_Q)
+```
 
