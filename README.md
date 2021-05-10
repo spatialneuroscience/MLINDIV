@@ -9,10 +9,6 @@ Maze Learning - Individual Differences (MLINDIV) is an expansive project that em
 ## 2. [**Behavioral**](https://github.com/spatialneuroscience/MLINDIV/tree/main/Behavioral)
    * [Behavioral Analysis](https://github.com/spatialneuroscience/MLINDIV/blob/main/Behavioral/behavior_analysis.Rmd)
    * [Maze Learning Map](https://github.com/spatialneuroscience/MLINDIV/blob/main/Behavioral/maze_learning_map2.png)
-   * [Node IDs](https://github.com/spatialneuroscience/MLINDIV/blob/main/Behavioral/node_IDs.csv)
-   * [Node Con List](https://github.com/spatialneuroscience/MLINDIV/blob/main/Behavioral/node_con_list.csv)
-   * [Node Matrix](https://github.com/spatialneuroscience/MLINDIV/blob/main/Behavioral/node_matrix.csv)
-   * [Trial to exploration sequence matching with ABs ID](https://github.com/spatialneuroscience/MLINDIV/blob/main/Behavioral/trial_to_exploration_sequence_matching_with_ABsID.csv)
 
 ## 3. [**Head Direction**](https://github.com/spatialneuroscience/MLINDIV/tree/main/Head_Direction_Analyses)
    * [Head Direction Behavioral Analysis](https://github.com/spatialneuroscience/MLINDIV/tree/main/Head_Direction_Analyses/Head_Direction_Behavioral_Analysis)
