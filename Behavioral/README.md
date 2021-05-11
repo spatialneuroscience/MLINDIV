@@ -1,5 +1,5 @@
  ## [Behavioral Analysis](https://github.com/spatialneuroscience/MLINDIV/tree/main/Behavioral)
- * [Behavioral Analysis](https://github.com/spatialneuroscience/MLINDIV/blob/main/Behavioral/behavior_analysis.Rmd) 
+ * [Behavioral Analysis Code](https://github.com/spatialneuroscience/MLINDIV/blob/main/Behavioral/behavior_analysis.Rmd) 
  * [Maze Learning Map](https://github.com/spatialneuroscience/MLINDIV/blob/main/Behavioral/maze_learning_map2.png)
  * [Node IDs](https://github.com/spatialneuroscience/MLINDIV/blob/main/Behavioral/node_IDs.csv) 
  **The Node IDs link the locations on the maze to a number**
