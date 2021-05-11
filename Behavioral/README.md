@@ -3,7 +3,7 @@
  * [Maze Learning Map](https://github.com/spatialneuroscience/MLINDIV/blob/main/Behavioral/maze_learning_map2.png)
  * [Node IDs](https://github.com/spatialneuroscience/MLINDIV/blob/main/Behavioral/node_IDs) 
  **The Node IDs link the locations on the maze to a number**
- * [Node Con List](https://github.com/spatialneuroscience/MLINDIV/blob/main/Behavioral/node_con_list.csv)
+ * [Node Con List](https://github.com/spatialneuroscience/MLINDIV/blob/main/Behavioral/node_con_list)
  **Lists connections between nodes**
  * [Node Matrix](https://github.com/spatialneuroscience/MLINDIV/blob/main/Behavioral/node_matrix.csv) 
  **The Node IDs link the locations of the maze to a number and those numbers are used in the matrix**
