@@ -1,0 +1,5 @@
+Identified whether the exact path taken in a trial was already taken in the explore phase. This one is genereated in the code, but it takes +1 hour to run, so there is no need to rerun it when you can just load it in.
+
+Trial to exploration sequence matching with ABsID data path:
+
+https://drive.google.com/drive/folders/13C86pnT2gCZpmDE-rM9YgNV5QiARTLvc
