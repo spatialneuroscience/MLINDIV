@@ -1,5 +1,3 @@
-Please email me (lawsonk1@uci.edu) if you need help with any of this or would like a run through!
-
 INITIAL GOALS
 Things we want to look at (correlate w accuracy)
 - correlate distance traveled/# button presses
