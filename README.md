@@ -46,7 +46,7 @@ Maze Learning - Individual Differences (MLINDIV) is an expansive project that em
 **fMRIPreprocessed Data, for Explore and Test Phases**  
 /mnt/chrastil/lab/data/MLINDIV/preprocessed/derivatives/fmriprep
 
-**Behavioral Master Files [Preprocessed]**  
+[**Behavioral Master Files [Preprocessed]**](https://github.com/spatialneuroscience/MLINDIV/tree/main/Behavioral%20Master%20Files%20%5BPreprocessed%5D)  
 /mnt/chrastil/lab/data/MLINDIV/preprocessed/behavioral
 
 **Demographic Sheet Path**
