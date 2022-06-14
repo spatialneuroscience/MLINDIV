@@ -1,9 +1,16 @@
-# Author: Robert Woodry
-# Contact: rwoodry@uci.edu
-# Last Updated: 11/01/2019
-# About: This script goes through all participant file folders, compiles relevant Eprime behavioral data into a 
-#         "tidy data" format, and appends it to a MLINDIV_behavioral_master.csv for further analysis
+# 1 
+# Original Author: Robert Woodry
+# FINAL Version Adapted By: Alina Tu
+# Contact: alinat2@uci.edu
+# Last Updated: 6/14/2022
 
+# About: This script goes through all participant file folders, compiles relevant Eprime behavioral data into a 
+#         "tidy data" format, and appends it to a MLINDIV_behavioral_full.csv for further analysis
+# Changes in FINAL Version: New working_dir path, as.tibble -> as_tibble, select -> dpylr::select, "master" -> "full"
+#         to avoid unnecessary references to slavery (check out Github's switch from "master" to "main" branch in 2020),
+#         fix errors in output to correct subject numbers for 052 C4, 076 B1, 113 2
+# Rob's original script is now in /mnt/chrastil/lab/users/rob/scripts/MLINDIV/OldVersions/
+# Rob's output data is now in /mnt/chrastil/lab/data/MLINDIV/raw/raw_behav/OldVersions/
 
 # Load proper packages. Rprime is built specifically for EPrime. If you do not have these packages installed, use
 #     install.packages("[package name goes here]") to install it on your R client.
@@ -16,26 +23,25 @@ library(plyr)
 # This working directory should contain file folders for each participant, with each folder containing Eprime trial data.
 # Each folder is named with participant's number:
 # i.e.: "002.....103"
-working_dir <- "C:/Users/UCI - Robert Woodry/Desktop/Research/Tasks/MLINDIV/EPrime Experiment Files/Data/BehavPreJustin"
-# working_dir <- "C:/Users/Robert Woodry/Desktop/Research/TASKS/MLINDIV/BehavData"
+working_dir <- "/mnt/chrastil/lab/data/MLINDIV/raw/raw_behav"
 setwd(working_dir)
 
 # Create a list of file folders containing participant data
 MLINDIV_filelist <- list.files()
 MLINDIV_filelist <- MLINDIV_filelist[nchar(MLINDIV_filelist) == 3]
 
-# Create an empty master data frame; this will contain all Explore and Test data for each participant.
+# Create an empty full data frame; this will contain all Explore and Test data for each participant.
 
-master_file <- tibble()
+full_file <- tibble()
 
 # Loop through each participant's folder
 for (participant_file_folder in 1:length(MLINDIV_filelist)){
   current_file <- MLINDIV_filelist[participant_file_folder]
 
-  master_participant <- tibble()
+  full_participant <- tibble()
   eprime_txt_files <- list.files(MLINDIV_filelist[participant_file_folder], pattern = ".*.txt")
   
-  # Loop through each .txt file in that participant's folder, build a master participant file, to be appended
+  # Loop through each .txt file in that participant's folder, build a full participant file, to be appended
   # to the mater file at the end of loop
   for (file_i in 1:length(eprime_txt_files)){
     
@@ -74,8 +80,8 @@ for (participant_file_folder in 1:length(MLINDIV_filelist)){
     if (eprime_txt_files[file_i] %in% eprime_test_txt_files){
       # Create the trial_proc tibble containing the trial procedure meta-data
       trial_proc <-e_df[e_df$Procedure == "TrialProc" | e_df$Procedure == "TrialRevProc", ]
-      trial_proc <- as.tibble(trial_proc) %>%
-        select(qc(
+      trial_proc <- as_tibble(trial_proc) %>%
+        dplyr::select(qc(
           Procedure, Sample, itilist, ITI.OnsetTime, 
           ITIDur, objlist, ObjDur, 
           pairlist, startPosition, startFacing, 
@@ -85,8 +91,8 @@ for (participant_file_folder in 1:length(MLINDIV_filelist)){
   
       
       # Update the e_df data frame to be a tibble that contains only the variables we care about
-      master_tibble <- as.tibble(e_df) %>%
-        select(qc(
+      full_tibble <- as_tibble(e_df) %>%
+        dplyr::select(qc(
           Eprime.Basename, Eprime.LevelName,
           ImageFile, Choose.OnsetTime,
           Choose.RTTime, Choose.RT, 
@@ -96,7 +102,7 @@ for (participant_file_folder in 1:length(MLINDIV_filelist)){
       
       
       # Create an empty tibble where a for loop creates repetitions of trial_proc rows to be used in adding to 
-      # the master tibble as new columns ( so for each row, it will now have not only movement data, 
+      # the full tibble as new columns ( so for each row, it will now have not only movement data, 
       # but also what trial type it is with Start and end goals, etc)
       trial_cols <- tibble()
       trial_proc_location <- which(e_df$Procedure == "TrialProc" | e_df$Procedure == "TrialRevProc")
@@ -117,18 +123,20 @@ for (participant_file_folder in 1:length(MLINDIV_filelist)){
       
       
       
-      # Remove TrialProc rows from master tibble, as well as the last row (which is useless), then column bind the new 
-      # trial_cols(which should now have the same # of rows as the master tibble) to the master tibble
-      master_tibble <- master_tibble[-c(trial_proc_location), ]
-      master_tibble <- master_tibble[-(nrow(master_tibble)), ]
-      master_tibble <- cbind(trial_cols, master_tibble)
+      # Remove TrialProc rows from full tibble, as well as the last row (which is useless), then column bind the new 
+      # trial_cols(which should now have the same # of rows as the full tibble) to the full tibble
+      full_tibble <- full_tibble[-c(trial_proc_location), ]
+      full_tibble <- full_tibble[-(nrow(full_tibble)), ]
+      full_tibble <- cbind(trial_cols, full_tibble)
       
       
-      
-      # Create a data frame with same number of rows as master tibble, that contains 3 columns of repeating values: 
+      # Create a data frame with same number of rows as full tibble, that contains 3 columns of repeating values: 
       # Subject (participant #), Task (Explore | Test), TaskType (Explore: 1 or 2 | Test: A1...C3)
       Task <- strsplit(e_df_header$DataFile.Basename, "_")[[1]][1]
       Subject <- e_df_header$Subject
+        if (e_df_header$Subject == 1 | e_df_header$Subject == 052){
+          print("-------------------issue here - row 134-------------------")
+        }
       Task_type <- strsplit(e_df_header$DataFile.Basename, "-")[[1]][1]
       Task_type <- paste0(strsplit(Task_type, "_")[[1]][3], strsplit(Task_type, "_")[[1]][4])
       
@@ -138,27 +146,26 @@ for (participant_file_folder in 1:length(MLINDIV_filelist)){
       } else {
         Finished.OnsetTime <- NA
       }
-      
-      
+
       
       # Grab the finish time of procedure
       # Finished.OnsetTime <- as.integer(e_frame[length(e_frame)][[1]]["Finished.OnsetTime"][[1]])
-      # Finished.OnsetTime <- rep(Finished.OnsetTime, nrow(master_tibble))
+      # Finished.OnsetTime <- rep(Finished.OnsetTime, nrow(full_tibble))
       
       
       meta_df <- cbind(Subject, Task, Task_type, Finished.OnsetTime)
-      meta_df <- meta_df[rep(seq_len(nrow(meta_df)), each = nrow(master_tibble)), ]
+      meta_df <- meta_df[rep(seq_len(nrow(meta_df)), each = nrow(full_tibble)), ]
       
 
-      # Bind that meta data frame to the master tibble
-      master_tibble <- cbind(meta_df, master_tibble)
+      # Bind that meta data frame to the full tibble
+      full_tibble <- cbind(meta_df, full_tibble)
       
         
     } 
     else {
       # Update the e_df data frame to be a tibble that contains only the variables we care about
-      master_tibble <- as.tibble(e_df) %>%
-        select(qc(
+      full_tibble <- as_tibble(e_df) %>%
+        dplyr::select(qc(
           Eprime.Basename, Eprime.LevelName,
           ImageFile, Choose.OnsetTime, 
           Choose.RTTime, Choose.RT, 
@@ -166,7 +173,7 @@ for (participant_file_folder in 1:length(MLINDIV_filelist)){
         ))
       
       
-      # Create a data frame with same number of rows as master tibble, that contains 3 columns of repeating values: 
+      # Create a data frame with same number of rows as full tibble, that contains 3 columns of repeating values: 
       # Subject (participant #), Task (Explore | Test), TaskType (Explore: 1 or 2 | Test: A1...C3)
       Task <- strsplit(e_df_header$DataFile.Basename, "-")[[1]][1]
       Subject <- e_df_header$Subject
@@ -193,25 +200,25 @@ for (participant_file_folder in 1:length(MLINDIV_filelist)){
       
       
       meta_df <- cbind(Subject, Task, Task_type, Procedure, Sample, Finished.OnsetTime, itilist, ITIDur, ITI.OnsetTime, objlist, ObjDur, pairlist, startPosition, startFacing, StartIm, endPosition, EndIm)
-      meta_df <- meta_df[rep(seq_len(nrow(meta_df)), each = nrow(master_tibble)), ]
+      meta_df <- meta_df[rep(seq_len(nrow(meta_df)), each = nrow(full_tibble)), ]
       
       
-      # Bind that meta data frame to the master tibble
-      master_tibble <- cbind(meta_df, master_tibble)
+      # Bind that meta data frame to the full tibble
+      full_tibble <- cbind(meta_df, full_tibble)
       
         
     }
     
 
     
-    # Append master_tibble to participant_master file through rbind()
-    master_participant <- rbind(master_participant, master_tibble)
+    # Append full_tibble to participant_full file through rbind()
+    full_participant <- rbind(full_participant, full_tibble)
 
     
   }
   
-  # Append master_participant file to the master_file
-  master_file <- rbind(master_file, master_participant)
+  # Append full_participant file to the full_file
+  full_file <- rbind(full_file, full_participant)
   
 }
 
@@ -316,39 +323,58 @@ hallsnip_fix <- function(hallsnipcol){
 }
 
 
-master_file <- master_file %>% mutate(end_location = convert_to_pos(ImageFile))
+full_file <- full_file %>% mutate(end_location = convert_to_pos(ImageFile))
 print("End Location calculated and added...")
-master_file <- master_file %>% mutate(hallsnip = convert_to_hall(VideoFile))
+full_file <- full_file %>% mutate(hallsnip = convert_to_hall(VideoFile))
 print("Hall video snippet calculated and added...")
 
 
-master_file <- master_file %>% mutate(end_location = endloc_fix(end_location))
+full_file <- full_file %>% mutate(end_location = endloc_fix(end_location))
 print("End location V & Y values fixed...")
-master_file$end_location <- str_replace(master_file$end_location, "P1", "Z1")
-master_file$end_location <- str_replace(master_file$end_location, "P4", "Z2")
+full_file$end_location <- str_replace(full_file$end_location, "P1", "Z1")
+full_file$end_location <- str_replace(full_file$end_location, "P4", "Z2")
 
-master_file <- master_file %>% mutate(hallsnip = hallsnip_fix(hallsnip))
+full_file <- full_file %>% mutate(hallsnip = hallsnip_fix(hallsnip))
 print("Hall snip video V & Y values fixed...")
-master_file$hallsnip <- str_replace(master_file$hallsnip, "P1", "Z1")
-master_file$hallsnip <- str_replace(master_file$hallsnip, "P4", "Z2")
+full_file$hallsnip <- str_replace(full_file$hallsnip, "P1", "Z1")
+full_file$hallsnip <- str_replace(full_file$hallsnip, "P4", "Z2")
 
-master_file <- master_file %>% mutate(movement = convert_to_movement(hallsnip))
+full_file <- full_file %>% mutate(movement = convert_to_movement(hallsnip))
 print("Movement type calculated and added...")
 
-master_file <- master_file %>% mutate(face_dir = convert_to_dir(end_location))
+full_file <- full_file %>% mutate(face_dir = convert_to_dir(end_location))
 print("Facing direction calculated and added...")
-master_file <- master_file %>% mutate(sphere = grepl("sphere", master_file$end_location))
+full_file <- full_file %>% mutate(sphere = grepl("sphere", full_file$end_location))
 print("Next to Sphere boolean calculated and added...")
 
 
 
-master_file <- master_file %>% mutate(letter_loc = convert_to_letter(end_location))
+full_file <- full_file %>% mutate(letter_loc = convert_to_letter(end_location))
 print("Letter-End Location calculated and added...")
 
 mcoords <- read.csv("location.csv")
 colnames(mcoords)[1] <- "letter_loc"
 
-master_file <- join(master_file, mcoords, by = "letter_loc")
+full_file <- join(full_file, mcoords, by = "letter_loc")
 print("X and Y coordinates merged and added...")
 
-write.csv(master_file, "MLINDIV_behavioral_master.csv")
+write.csv(full_file, "MLINDIV_behavioral_full.csv")
+
+
+
+#### 
+
+full_file_edit <- read.csv("MLINDIV_behavioral_full.csv")
+sub_052 <- which(full_file_edit$Subject == 1 & full_file_edit$Task_type == "C4")
+full_file_edit$Subject[sub_052] = 52
+sub_076 <- which(full_file_edit$Subject == 1 & full_file_edit$Task_type == "B1")
+full_file_edit$Subject[sub_076] = 76
+print("Fixed subject '1' errors for subjects 52 and 76...")
+
+sub_113 <- which(full_file_edit$Subject == 20 & full_file_edit$Task_type == "1")
+sub_113 <- sub_113[sub_113 > 90000]
+full_file_edit$Subject[sub_113] = 113
+full_file_edit$Task_type[sub_113] = 2
+print("Fixed subject '20' run '1' errors for subject 113 run 2...")
+
+write.csv(full_file_edit, "MLINDIV_behavioral_full.csv")
