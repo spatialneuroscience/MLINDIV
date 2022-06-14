@@ -1,26 +1,35 @@
-# Split master file into Explore and Test
-# Split test master file by rows where movement = "Select"
-# Split Explore files by NAs
-# For all these newly split data frames grab the letter_locs and store them in as path vectors in lists 
-#         that will serve as individual observations in an eventual new file for trial by trial summary
+# 2
+# Original Author: Robert Woodry
+# FINAL Version Adapted By: Alina Tu
+# Contact: alinat2@uci.edu
+# Last Updated: 6/14/2022
 
+# About: Split full file into Explore and Test
+#        Split test full file by rows where movement = "Select"
+#        Split Explore files by NAs
+#        For all these newly split data frames grab the letter_locs and store them in as path vectors in 
+#              lists that will serve as individual observations in an eventual new file for 
+#              trial by trial summary
+# Changes in FINAL Version: New working_dir path, "master" -> "full," "EndAt" -> "end_location"
+#        because "EndAt" is the target object and only matches participants' end locations if trial is correct
+# Rob's original script is now in /mnt/chrastil/lab/users/rob/scripts/MLINDIV/OldVersions/
+# Rob's output data is now in /mnt/chrastil/lab/data/MLINDIV/raw/raw_behav/OldVersions/
 
-# set working directory here to where the master csv file is located along with the location and dista
-working_dir <- "C:/Users/UCI - Robert Woodry/Desktop/Research/Tasks/MLINDIV/EPrime Experiment Files/Data/BehavPreJustin"
-# working_dir <- "C:/Users/Robert Woodry/Desktop/Research/TASKS/MLINDIV/BehavData"
+# set working directory here to where the full csv file is located along with the location and dista
+working_dir <- "/mnt/chrastil/lab/data/MLINDIV/raw/raw_behav/"
 setwd(working_dir)
 
 
-master_file <- read.csv("MLINDIV_behavioral_master.csv")
+full_file <- read.csv("MLINDIV_behavioral_full.csv")
 
 library(tidyverse)
 library(plyr)
 
-tt_rows <- which(c(FALSE, tail(master_file$Task_type,-1) != head(master_file$Task_type,-1)))
-s_rows <- which(c(FALSE, tail(master_file$Sample,-1) != head(master_file$Sample,-1)))
+tt_rows <- which(c(FALSE, tail(full_file$Task_type,-1) != head(full_file$Task_type,-1)))
+s_rows <- which(c(FALSE, tail(full_file$Sample,-1) != head(full_file$Sample,-1)))
 splitrows <- sort(c(tt_rows, s_rows))
 splitrows <- splitrows - 1
-meta <- split(master_file, cumsum(1:nrow(master_file) %in% (splitrows+1)))
+meta <- split(full_file, cumsum(1:nrow(full_file) %in% (splitrows+1)))
 
 # Meta contains all the different trials within each procedure ran for each participant
 paths <- c()
@@ -203,7 +212,7 @@ for (i in 1:length(meta)){
 
 }
 
-trial_master <- data.frame(Subject = Subject, eprocs = eprocs, Task_type = Task_type, Procedure = Procedure,
+trial_full <- data.frame(Subject = Subject, eprocs = eprocs, Task_type = Task_type, Procedure = Procedure,
                            Sample = Sample, objlist = objlist, PairList = PairList, ITIDur = id, ObjDur = od, startPosition = startPosition, 
                            startFacing = startFacing, paths = paths, e_paths = e_paths, Vid_paths = Vid_paths, select_made = select_made, StartAt = StartIm, EndAt = EndIm, 
                            end_location = select_location, end_rotation = end_rotation, accuracy = accuracy, 
@@ -215,10 +224,10 @@ dtable <- read.csv("distancetable.csv")
 dtable[30,1] <- "P"
 dtable[44, 1] <- "P"
 colnames(dtable)[1] <- "StartAt"
-colnames(dtable)[2] <- "EndAt"
+colnames(dtable)[2] <- "end_location"
 
-t <- join(trial_master, dtable, by = c("StartAt", "EndAt"))
+t <- join(trial_full, dtable, by = c("StartAt", "end_location"))
 
 t <- t %>% mutate(fmv_duration = trial_endtime - final_movevid_OT)
 
-write.csv(t, "MLINDIV_trial_master.csv")
+write.csv(t, "MLINDIV_trial_full.csv")
