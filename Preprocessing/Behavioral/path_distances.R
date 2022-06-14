@@ -1,6 +1,17 @@
+# 3
+# Original Author: Robert Woodry
+# FINAL Version Adapted By: Alina Tu
+# Contact: alinat2@uci.edu
+# Last Updated: 6/7/2022
+
+# Changes in FINAL Version: New working_dir path, corrected path efficiency scoring to include incorrect trials in addition
+#         to correct trials, "master" -> "full"
+# Rob's original script is now in /mnt/chrastil/lab/users/rob/scripts/MLINDIV/OldVersions/
+# Rob's output data is now in /mnt/chrastil/lab/data/MLINDIV/raw/raw_behav/OldVersions/
+
 library(rprime)
 
-working_dir <- "C:/Users/UCI - Robert Woodry/Desktop/Research/Tasks/MLINDIV/EPrime Experiment Files/Data/BehavPreJustin"
+working_dir <- "/mnt/chrastil/lab/data/MLINDIV/raw/raw_behav/"
 setwd(working_dir)
 
 pd <- read.csv("pathdistances.csv")
@@ -61,11 +72,11 @@ calc_euc_dist <- function(pathscol){
   
 }
 
-tm <- read.csv("MLINDIV_trial_master.csv")
+tm <- read.csv("MLINDIV_trial_full.csv")
 tm <- tm %>% mutate(path_dist_trav = sum_path_dist(paths))
 tm <- tm %>% mutate(euc_dist_trav = calc_euc_dist(paths))
 
-write.csv(tm, "MLINDIV_trial_master.csv")
+write.csv(tm, "MLINDIV_trial_full.csv")
 
 
 pd <- read.csv("pathdistances.csv")
@@ -99,7 +110,7 @@ calc_pd <- function(pathscol){
     return(path_distances)
 }
 
-tm <- read.csv("MLINDIV_trial_master.csv")
+tm <- read.csv("MLINDIV_trial_full.csv")
 
 path_efficiencies <- c()
 tm$paths <- as.character(tm$paths)
@@ -107,14 +118,11 @@ tm$paths <- as.character(tm$paths)
 # Calculate path efficiencies
 for (i in 1:nrow(tm)){
   path_eff <- 0
-  if (!is.na(tm$Procedure[i]) & tm$select_made[i] & !is.na(tm$select_made[i])){
-    if (tm$accuracy[i] & !is.na(tm$accuracy[i])){
-      path_eff <- tm$path_dist_trav[i] / tm$Path.Distance[i]
-    } else {
-      path_eff <-  tm$path_dist_trav[i] / tm$Path.Distance[which(tm$StartAt == tm$StartAt[i] & tm$EndAt == as.character(tm$end_location[i]))[1]]
-    }
-   
-  } else {
+  if (!is.na(tm$Procedure[i]) & !is.na(tm$select_made[i])){
+    path_eff <- tm$path_dist_trav[i] / tm$Path.Distance[i]
+    # path_eff <- tm$path_dist_trav[i] / tm$Path.Distance[which(tm$StartAt == tm$StartAt[i] & tm$EndAt == as.character(tm$end_location[i]))[1]]
+  }
+  else {
     path_eff <- NA
   }
   
@@ -158,5 +166,5 @@ tm_new$dates <- as.Date(tm_new$dates, "SessionDate: %m-%d-%Y")
 
 
 
-write.csv(tm_new, "MLINDIV_trial_master.csv", row.names = FALSE)
+write.csv(tm_new, "MLINDIV_trial_full.csv", row.names = FALSE)
 
