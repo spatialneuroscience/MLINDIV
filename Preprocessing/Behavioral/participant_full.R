@@ -1,8 +1,18 @@
-working_dir <- "C:/Users/UCI - Robert Woodry/Desktop/Research/Tasks/MLINDIV/EPrime Experiment Files/Data/BehavPreJustin"
+# 4
+# Original Author: Robert Woodry
+# FINAL Version Adapted By: Alina Tu
+# Contact: alinat2@uci.edu
+# Last Updated: 6/8/2022
+
+# Changes in FINAL Version: New working_dir path, "master" -> "full"
+# Rob's original script is now in /mnt/chrastil/lab/users/rob/scripts/MLINDIV/OldVersions/
+# Rob's output data is now in /mnt/chrastil/lab/data/MLINDIV/raw/raw_behav/OldVersions/
+
+working_dir <- "/mnt/chrastil/lab/data/MLINDIV/raw/raw_behav/"
 setwd(working_dir)
 # TODO: Need to add Explore Trials completed tally and Test trials completed tally
 
-tm <- read.csv("MLINDIV_trial_master.csv")
+tm <- read.csv("MLINDIV_trial_full.csv")
 
 tm_split <- split(tm, tm$Subject)
 
@@ -23,9 +33,10 @@ bwstair <- c("H3", "Q4", "R4", "S4", "T1", "B3")
 person <- c("M3", "Q2", "R2", "S2", "E3")
 philsbar <- c("U3", "X2", "T2", "R3", "P4", "J3", "D3")
 
+# explore and test phases: tm- test means, ts- test std dev, em- explore means, es- explore std dev
 pm_colnames <- c("Subject", "StartDate", "StartTime", paste0("tm_", DOI), paste0("ts_", DOI), paste0("em_", DOI), paste0("es_", DOI), paste0("enodes_", LETTERS), objlmarks)
 
-participant_master <- c()
+participant_full <- c()
 
 acc_mean <- c()
 acc_sd <- c()
@@ -60,7 +71,7 @@ for (i in 1:length(tm_split)){
     
     ex_table <- table(strsplit(as.character(explore$e_paths[j]), " ")[[1]])
     
-    obj_lmark_table["obj_guitar"] <-sum(obj_lmark_table["obj_guitar"], ex_table["A4"], na.rm = TRUE)
+    obj_lmark_table["obj_guitar"] <- sum(obj_lmark_table["obj_guitar"], ex_table["A4"], na.rm = TRUE)
     obj_lmark_table["obj_snowman"] <- sum(obj_lmark_table["obj_snowman"], ex_table["I2"], na.rm=TRUE)
     obj_lmark_table["obj_lamp"] <- sum(obj_lmark_table["obj_lamp"], ex_table["K2"], na.rm = TRUE)
     obj_lmark_table["obj_spaceship"] <- sum(obj_lmark_table["obj_spaceship"], ex_table["L2"], na.rm = TRUE)
@@ -104,14 +115,15 @@ for (i in 1:length(tm_split)){
     explore_sds <- c(explore_sds, sd(explore[DOI[j]][ ,1], na.rm = TRUE))
   }
 
-  p_master <- c(as.character(tm_split[[i]]$Subject[1]), as.character(tm_split[[i]]$dates[1]), as.character(tm_split[[i]]$times[1]), trial_means, trial_sds, explore_means, explore_sds, oall_node_table, obj_lmark_table)
-  participant_master <- rbind(participant_master, p_master)  
+  p_full <- c(as.character(tm_split[[i]]$Subject[1]), as.character(tm_split[[i]]$dates[1]), as.character(tm_split[[i]]$times[1]), trial_means, trial_sds, explore_means, explore_sds, oall_node_table, obj_lmark_table)
+  participant_full <- rbind(participant_full, p_full)  
   
 }
 
-colnames(participant_master) <- pm_colnames
-participant_master <- participant_master[, c(1:23, 26:33, 36:ncol(participant_master))]
-participant_master <- cbind(n_trials, n_explores, n_corrects, n_selects, n_outoftimes, participant_master)
-participant_master <- participant_master[, c(6, 1:5, 7:ncol(participant_master))]   # Reorder columns
+colnames(participant_full) <- pm_colnames
+participant_full <- participant_full[, c(1:23, 26:33, 36:ncol(participant_full))]
+participant_full <- cbind(n_trials, n_explores, n_corrects, n_selects, n_outoftimes, participant_full)
+participant_full <- participant_full[, c(6, 1:5, 7:ncol(participant_full))]   # Reorder columns
 
-write.csv(participant_master, "MLINDIV_participant_master.csv", row.names = FALSE)
+write.csv(participant_full, "MLINDIV_participant_full.csv", row.names = FALSE)
+
