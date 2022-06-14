@@ -1,4 +1,4 @@
-In the participant master file,
+In the participant full file,
 <br>
 ts = trial standard deviation
 <br>
