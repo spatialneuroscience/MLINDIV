@@ -2,10 +2,11 @@
 # Original Author: Robert Woodry
 # FINAL Version Adapted By: Alina Tu
 # Contact: alinat2@uci.edu
-# Last Updated: 6/7/2022
+# Last Updated: 1/4/2023
 
 # Changes in FINAL Version: New working_dir path, corrected path efficiency scoring to include incorrect trials in addition
-#         to correct trials, "master" -> "full"
+#         to correct trials, "master" -> "full,"
+#   [1/4/23 changes]    extra column removed
 # Rob's original script is now in /mnt/chrastil/lab/users/rob/scripts/MLINDIV/OldVersions/
 # Rob's output data is now in /mnt/chrastil/lab/data/MLINDIV/raw/raw_behav/OldVersions/
 
@@ -166,5 +167,4 @@ tm_new$dates <- as.Date(tm_new$dates, "SessionDate: %m-%d-%Y")
 
 
 
-write.csv(tm_new, "MLINDIV_trial_full.csv", row.names = FALSE)
-
+write.csv(tm_new[-c(1)], "MLINDIV_trial_full.csv", row.names = FALSE)

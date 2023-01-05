@@ -2,7 +2,7 @@
 # Original Author: Robert Woodry
 # FINAL Version Adapted By: Alina Tu
 # Contact: alinat2@uci.edu
-# Last Updated: 6/14/2022
+# Last Updated: 1/4/2023
 
 # About: Split full file into Explore and Test
 #        Split test full file by rows where movement = "Select"
@@ -11,7 +11,9 @@
 #              lists that will serve as individual observations in an eventual new file for 
 #              trial by trial summary
 # Changes in FINAL Version: New working_dir path, "master" -> "full," "EndAt" -> "end_location"
-#        because "EndAt" is the target object and only matches participants' end locations if trial is correct
+#        because "EndAt" is the target object and only matches participants' end locations if trial is correct,
+#   [12/13/22 changes]  od and id values were initially switched - now fixed, 
+#   [1/4/23 changes]    getready_rttime, iti_onset, startat_onset, goal_onset, and session_time variables added
 # Rob's original script is now in /mnt/chrastil/lab/users/rob/scripts/MLINDIV/OldVersions/
 # Rob's output data is now in /mnt/chrastil/lab/data/MLINDIV/raw/raw_behav/OldVersions/
 
@@ -39,6 +41,12 @@ Task <- c()
 Task_type <- c()
 Procedure <- c()
 Sample <- c()
+Session_time <- c()
+GetReady.RTTime <- c()
+Finished.OnsetTime <- c()
+ITI.OnsetTime <- c()
+StartAt.OnsetTime <- c()
+Goal.OnsetTime <- c()
 objlist <- c()
 PairList <- c()
 startPosition <- c()
@@ -112,6 +120,30 @@ for (i in 1:length(meta)){
   sample <- as.character(meta[[i]]["Sample"][[1]][1])
   Sample <- c(Sample, sample)
   
+  # Session Time
+  session_time <- as.character(meta[[i]]["Session_time"][[1]][1])
+  Session_time <- c(Session_time, session_time)
+  
+  # GetReady.RTTime
+  getready_rtt <- as.character(meta[[i]]["GetReady.RTTime"][[1]][1])
+  GetReady.RTTime <- c(GetReady.RTTime, getready_rtt)
+  
+  # Finished.OnsetTime
+  finish_onset <- as.character(meta[[i]]["Finished.OnsetTime"][[1]][1])
+  Finished.OnsetTime <- c(Finished.OnsetTime, finish_onset)
+  
+  # ITI.OnsetTime
+  iti_onset <- as.character(meta[[i]]["ITI.OnsetTime"][[1]][1])
+  ITI.OnsetTime <- c(ITI.OnsetTime, iti_onset)
+  
+  # StartAt.OnsetTime
+  startim_onset <- as.character(meta[[i]]["StartAt.OnsetTime"][[1]][1])
+  StartAt.OnsetTime <- c(StartAt.OnsetTime, startim_onset)
+  
+  # Goal.OnsetTime
+  goal_onset <- as.character(meta[[i]]["Goal.OnsetTime"][[1]][1])
+  Goal.OnsetTime <- c(Goal.OnsetTime, goal_onset)
+  
   # objlist
   obj <- as.character(meta[[i]]["objlist"][[1]][1])
   objlist <- c(objlist, obj)
@@ -139,10 +171,10 @@ for (i in 1:length(meta)){
   EndIm <- c(EndIm, ei)
   
   #ObjDur
-  od <- c(od, as.numeric(as.character((meta[[i]]["ITIDur"][[1]][1]))))
+  od <- c(od, as.numeric(as.character((meta[[i]]["ObjDur"][[1]][1]))))
   
   #ItiDur
-  id <- c(id, as.numeric(as.character((meta[[i]]["ObjDur"][[1]][1]))))
+  id <- c(id, as.numeric(as.character((meta[[i]]["ITIDur"][[1]][1]))))
   
   # end_location
   nc <- nchar(path)
@@ -217,7 +249,8 @@ trial_full <- data.frame(Subject = Subject, eprocs = eprocs, Task_type = Task_ty
                            startFacing = startFacing, paths = paths, e_paths = e_paths, Vid_paths = Vid_paths, select_made = select_made, StartAt = StartIm, EndAt = EndIm, 
                            end_location = select_location, end_rotation = end_rotation, accuracy = accuracy, 
                            nodesturns_count = nodesturns_count, nodes_count = nodes_count, turns_count = turns_count, average_RT = average_RT,
-                           final_movevid_OT = final_movevid_OT, trial_starttime = trial_starttime, trial_endtime = trial_endtime, trial_duration = trial_duration
+                           final_movevid_OT = final_movevid_OT, trial_starttime = trial_starttime, trial_endtime = trial_endtime, trial_duration = trial_duration,
+                           getready_rttime = GetReady.RTTime, iti_onset = ITI.OnsetTime, startat_onset = StartAt.OnsetTime, goal_onset = Goal.OnsetTime, session_time = Session_time
                            )
 
 dtable <- read.csv("distancetable.csv")

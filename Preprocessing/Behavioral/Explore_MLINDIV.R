@@ -2,13 +2,14 @@
 # Original Author: Robert Woodry
 # FINAL Version Adapted By: Alina Tu
 # Contact: alinat2@uci.edu
-# Last Updated: 6/14/2022
+# Last Updated: 1/4/2023
 
 # About: This script goes through all participant file folders, compiles relevant Eprime behavioral data into a 
 #         "tidy data" format, and appends it to a MLINDIV_behavioral_full.csv for further analysis
 # Changes in FINAL Version: New working_dir path, as.tibble -> as_tibble, select -> dpylr::select, "master" -> "full"
 #         to avoid unnecessary references to slavery (check out Github's switch from "master" to "main" branch in 2020),
-#         fix errors in output to correct subject numbers for 052 C4, 076 B1, 113 2
+#         fix errors in output to correct subject numbers for 052 C4, 076 B1, 113 2,
+#   [1/4/23 changes]    GetReady_RTTime, StartAt.OnsetTime, Goal.OnsetTime, and Session_time variables added, extra column removed
 # Rob's original script is now in /mnt/chrastil/lab/users/rob/scripts/MLINDIV/OldVersions/
 # Rob's output data is now in /mnt/chrastil/lab/data/MLINDIV/raw/raw_behav/OldVersions/
 
@@ -42,7 +43,7 @@ for (participant_file_folder in 1:length(MLINDIV_filelist)){
   eprime_txt_files <- list.files(MLINDIV_filelist[participant_file_folder], pattern = ".*.txt")
   
   # Loop through each .txt file in that participant's folder, build a full participant file, to be appended
-  # to the mater file at the end of loop
+  # to the full file at the end of loop
   for (file_i in 1:length(eprime_txt_files)){
     
     
@@ -79,13 +80,14 @@ for (participant_file_folder in 1:length(MLINDIV_filelist)){
     # If a test trial, create a separate tibble for the TrialProcedures, which contain start/end goals and other variables
     if (eprime_txt_files[file_i] %in% eprime_test_txt_files){
       # Create the trial_proc tibble containing the trial procedure meta-data
-      trial_proc <-e_df[e_df$Procedure == "TrialProc" | e_df$Procedure == "TrialRevProc", ]
+      trial_proc <- e_df[e_df$Procedure == "TrialProc" | e_df$Procedure == "TrialRevProc", ]
       trial_proc <- as_tibble(trial_proc) %>%
         dplyr::select(qc(
           Procedure, Sample, itilist, ITI.OnsetTime, 
           ITIDur, objlist, ObjDur, 
           pairlist, startPosition, startFacing, 
-          StartIm, endPosition, EndIm
+          StartIm, endPosition, EndIm,
+          StartAt.OnsetTime, Goal.OnsetTime
         ))
       
   
@@ -139,6 +141,14 @@ for (participant_file_folder in 1:length(MLINDIV_filelist)){
         }
       Task_type <- strsplit(e_df_header$DataFile.Basename, "-")[[1]][1]
       Task_type <- paste0(strsplit(Task_type, "_")[[1]][3], strsplit(Task_type, "_")[[1]][4])
+      Session_time <- e_df_header$SessionTime
+      
+      # Grab the get ready time of procedure
+      if(!is.null(e_frame[length(e_frame)][[1]]["GetReady.RTTime"][[1]])){
+        GetReady.RTTime <- as.integer(e_frame[length(e_frame)][[1]]["GetReady.RTTime"][[1]])
+      } else {
+        GetReady.RTTime <- NA
+      }
       
       # Grab the finish time of procedure
       if(!is.null(e_frame[length(e_frame)][[1]]["Finished.OnsetTime"][[1]])){
@@ -146,14 +156,13 @@ for (participant_file_folder in 1:length(MLINDIV_filelist)){
       } else {
         Finished.OnsetTime <- NA
       }
-
       
       # Grab the finish time of procedure
       # Finished.OnsetTime <- as.integer(e_frame[length(e_frame)][[1]]["Finished.OnsetTime"][[1]])
       # Finished.OnsetTime <- rep(Finished.OnsetTime, nrow(full_tibble))
       
       
-      meta_df <- cbind(Subject, Task, Task_type, Finished.OnsetTime)
+      meta_df <- cbind(Subject, Task, Task_type, Session_time, GetReady.RTTime, Finished.OnsetTime)
       meta_df <- meta_df[rep(seq_len(nrow(meta_df)), each = nrow(full_tibble)), ]
       
 
@@ -180,6 +189,7 @@ for (participant_file_folder in 1:length(MLINDIV_filelist)){
       Task_type <- strsplit(e_df_header$DataFile.Basename, "-")[[1]][3]
       Procedure <- NA
       Sample <- NA
+      Session_time <- e_df_header$SessionTime
       itilist <- NA
       ITIDur <- NA
       ITI.OnsetTime <- NA
@@ -191,6 +201,14 @@ for (participant_file_folder in 1:length(MLINDIV_filelist)){
       StartIm <- NA
       endPosition <- NA
       EndIm <- NA
+      StartAt.OnsetTime <- NA
+      Goal.OnsetTime <- NA
+      # Grab the get ready time of procedure
+      if(!is.null(e_frame[length(e_frame)][[1]]["GetReady.RTTime"][[1]])){
+        GetReady.RTTime <- as.integer(e_frame[length(e_frame)][[1]]["GetReady.RTTime"][[1]])
+      } else {
+        GetReady.RTTime <- NA
+      }
       # Grab the finish time of procedure
       if(!is.null(e_frame[length(e_frame)][[1]]["Finished.OnsetTime"][[1]])){
         Finished.OnsetTime <- as.integer(e_frame[length(e_frame)][[1]]["Finished.OnsetTime"][[1]])
@@ -199,7 +217,7 @@ for (participant_file_folder in 1:length(MLINDIV_filelist)){
       }
       
       
-      meta_df <- cbind(Subject, Task, Task_type, Procedure, Sample, Finished.OnsetTime, itilist, ITIDur, ITI.OnsetTime, objlist, ObjDur, pairlist, startPosition, startFacing, StartIm, endPosition, EndIm)
+      meta_df <- cbind(Subject, Task, Task_type, Procedure, Sample, Session_time, GetReady.RTTime, Finished.OnsetTime, itilist, ITIDur, ITI.OnsetTime, objlist, ObjDur, pairlist, startPosition, startFacing, StartIm, endPosition, EndIm, StartAt.OnsetTime, Goal.OnsetTime)
       meta_df <- meta_df[rep(seq_len(nrow(meta_df)), each = nrow(full_tibble)), ]
       
       
@@ -377,4 +395,4 @@ full_file_edit$Subject[sub_113] = 113
 full_file_edit$Task_type[sub_113] = 2
 print("Fixed subject '20' run '1' errors for subject 113 run 2...")
 
-write.csv(full_file_edit, "MLINDIV_behavioral_full.csv")
+write.csv(full_file_edit[-c(1)], "MLINDIV_behavioral_full.csv")
