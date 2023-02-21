@@ -2,14 +2,16 @@
 # Original Author: Robert Woodry
 # FINAL Version Adapted By: Alina Tu
 # Contact: alinat2@uci.edu
-# Last Updated: 1/4/2023
+# Last Updated: 2/9/2023
 
 # About: This script goes through all participant file folders, compiles relevant Eprime behavioral data into a 
 #         "tidy data" format, and appends it to a MLINDIV_behavioral_full.csv for further analysis
 # Changes in FINAL Version: New working_dir path, as.tibble -> as_tibble, select -> dpylr::select, "master" -> "full"
 #         to avoid unnecessary references to slavery (check out Github's switch from "master" to "main" branch in 2020),
 #         fix errors in output to correct subject numbers for 052 C4, 076 B1, 113 2,
-#   [1/4/23 changes]    GetReady_RTTime, StartAt.OnsetTime, Goal.OnsetTime, and Session_time variables added, extra column removed
+#   [1/4/23 changes]    GetReady_RTTime, StartAt.OnsetTime, Goal.OnsetTime, and Session_time variables added, extra column removed,
+#   [1/11/23 changes]   changed CSV output directory to ...data/MLINDIV/preprocessed/behavioral instead of ...data/MLINDIV/raw/raw_behav,
+#   [2/9/23 changes]    edited exploration task-type mis-numbering
 # Rob's original script is now in /mnt/chrastil/lab/users/rob/scripts/MLINDIV/OldVersions/
 # Rob's output data is now in /mnt/chrastil/lab/data/MLINDIV/raw/raw_behav/OldVersions/
 
@@ -241,7 +243,6 @@ for (participant_file_folder in 1:length(MLINDIV_filelist)){
 }
 
 
-
 convert_to_pos <- function (imagecol){
   end_pos = c()
   for (i in 1:length(imagecol)){
@@ -376,11 +377,15 @@ colnames(mcoords)[1] <- "letter_loc"
 full_file <- join(full_file, mcoords, by = "letter_loc")
 print("X and Y coordinates merged and added...")
 
-write.csv(full_file, "MLINDIV_behavioral_full.csv")
+# write.csv(full_file, file.path("/mnt/chrastil/lab/users/alina", "MLINDIV_behavioral_full.csv")) # use personal working directory (instead of the row below) to test changes
+write.csv(full_file, file.path("/mnt/chrastil/lab/data/MLINDIV/preprocessed/behavioral", "MLINDIV_behavioral_full.csv"))
 
 
 
 #### 
+# Editing Participant Number mis-numbering
+# setwd("/mnt/chrastil/lab/users/alina") # use personal working directory (instead of the row below) to test changes
+setwd("/mnt/chrastil/lab/data/MLINDIV/preprocessed/behavioral")
 
 full_file_edit <- read.csv("MLINDIV_behavioral_full.csv")
 sub_052 <- which(full_file_edit$Subject == 1 & full_file_edit$Task_type == "C4")
@@ -394,5 +399,38 @@ sub_113 <- sub_113[sub_113 > 90000]
 full_file_edit$Subject[sub_113] = 113
 full_file_edit$Task_type[sub_113] = 2
 print("Fixed subject '20' run '1' errors for subject 113 run 2...")
+
+# Editing Exploration Task Type mis-numbering
+# exploration <- full_file_edit %>% filter(full_file_edit$Task == "Explore")
+exploration <- full_file_edit[which(full_file_edit$Task == "Explore"), ]
+misnumbered_df <- exploration[which(exploration$Task_type!=1 & exploration$Task_type!=2), ]
+misnumbered_subjects <- unique(misnumbered_df$Subject) # subjects 4, 15, 79
+for (subject in misnumbered_subjects){
+  indiv_explore <- exploration[which(exploration$Subject == subject), ]
+  task_type_order <- cbind(unique(indiv_explore$Task_type), unique(indiv_explore$Session_time), unique(as.character(indiv_explore$Session_time)))
+  colnames(task_type_order) <- c("Task_type", "Duration", "Session_time")
+  
+  if (as.integer(task_type_order[1,2]) > as.integer(task_type_order[2,2])){
+    for (row in which(misnumbered_df$Session_time == task_type_order[2,3])){
+      misnumbered_df$Task_type[row] <- 1
+    } 
+    for (row in which(misnumbered_df$Session_time == task_type_order[1,3])){
+      misnumbered_df$Task_type[row] <- 2
+    } 
+  } else {
+    for (row in which(misnumbered_df$Session_time == task_type_order[1,3])){
+      misnumbered_df$Task_type[row] <- 1
+    } 
+    for (row in which(misnumbered_df$Session_time == task_type_order[2,3])){
+      misnumbered_df$Task_type[row] <- 2
+    } 
+  }
+  
+  print(unique(misnumbered_df$Task_type))
+}
+
+exploration[match(misnumbered_df$X, exploration$X), ] <- misnumbered_df
+print(which(exploration$Task_type!=1 & exploration$Task_type!=2)) # If edits are correct, should output 0
+full_file_edit[match(exploration$X, full_file_edit$X), ] <- exploration
 
 write.csv(full_file_edit[-c(1)], "MLINDIV_behavioral_full.csv")
