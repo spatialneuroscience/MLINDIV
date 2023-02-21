@@ -2,14 +2,16 @@
 # Original Author: Robert Woodry
 # FINAL Version Adapted By: Alina Tu
 # Contact: alinat2@uci.edu
-# Last Updated: 6/8/2022
+# Last Updated: 1/29/2023
 
-# Changes in FINAL Version: New working_dir path, "master" -> "full"
+# Changes in FINAL Version: New working_dir path, "master" -> "full",
+#   [1/11/23 changes]    changed CSV output directory to ...data/MLINDIV/preprocessed/behavioral instead of ...data/MLINDIV/raw/raw_behav,
+#   [1/29/23 changes]    added columns for path eff calculations for only accurate trials
 # Rob's original script is now in /mnt/chrastil/lab/users/rob/scripts/MLINDIV/OldVersions/
 # Rob's output data is now in /mnt/chrastil/lab/data/MLINDIV/raw/raw_behav/OldVersions/
 
-working_dir <- "/mnt/chrastil/lab/data/MLINDIV/raw/raw_behav/"
-setwd(working_dir)
+# setwd("/mnt/chrastil/lab/users/alina") # use personal working directory (instead of the row below) to test changes
+setwd("/mnt/chrastil/lab/data/MLINDIV/preprocessed/behavioral")
 # TODO: Need to add Explore Trials completed tally and Test trials completed tally
 
 tm <- read.csv("MLINDIV_trial_full.csv")
@@ -19,7 +21,7 @@ tm_split <- split(tm, tm$Subject)
 options(scipen = 999)
 
 DOI <- c('accuracy', 'select_made', 'nodesturns_count', 'nodes_count', 
-         'turns_count', 'average_RT', 'trial_duration', 'path_dist_trav', 'euc_dist_trav', 'path_efficiencies')
+         'turns_count', 'average_RT', 'trial_duration', 'path_dist_trav', 'euc_dist_trav', 'path_efficiencies', 'path_efficiencies_acc_only')
 
 objlmarks <- c("obj_guitar", "obj_snowman", "obj_lamp", "obj_spaceship", 
                        "obj_chair", "obj_chicken", "obj_trophy", "obj_umbrella", 
@@ -121,9 +123,8 @@ for (i in 1:length(tm_split)){
 }
 
 colnames(participant_full) <- pm_colnames
-participant_full <- participant_full[, c(1:23, 26:33, 36:ncol(participant_full))]
+participant_full <- participant_full[, c(1:25, 28:36, 39:ncol(participant_full))]
 participant_full <- cbind(n_trials, n_explores, n_corrects, n_selects, n_outoftimes, participant_full)
 participant_full <- participant_full[, c(6, 1:5, 7:ncol(participant_full))]   # Reorder columns
 
 write.csv(participant_full, "MLINDIV_participant_full.csv", row.names = FALSE)
-
