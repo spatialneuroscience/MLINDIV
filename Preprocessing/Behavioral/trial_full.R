@@ -2,7 +2,7 @@
 # Original Author: Robert Woodry
 # FINAL Version Adapted By: Alina Tu
 # Contact: alinat2@uci.edu
-# Last Updated: 1/4/2023
+# Last Updated: 1/11/2023
 
 # About: Split full file into Explore and Test
 #        Split test full file by rows where movement = "Select"
@@ -13,13 +13,16 @@
 # Changes in FINAL Version: New working_dir path, "master" -> "full," "EndAt" -> "end_location"
 #        because "EndAt" is the target object and only matches participants' end locations if trial is correct,
 #   [12/13/22 changes]  od and id values were initially switched - now fixed, 
-#   [1/4/23 changes]    getready_rttime, iti_onset, startat_onset, goal_onset, and session_time variables added
+#   [1/4/23 changes]    getready_rttime, iti_onset, startat_onset, goal_onset, and session_time variables added,
+#   [1/8/23 changes]    distancetable.csv file path updated because the previous distancetable.csv was incomplete,
+#   [1/11/23 changes]   changed CSV output directory to ...data/MLINDIV/preprocessed/behavioral instead of ...data/MLINDIV/raw/raw_behav,
+#                       test trials scored as "accurate" where a) participants were supposed to go to N but ended at F facing south and b) participants were supposed to go to Y but ended at V facing east
 # Rob's original script is now in /mnt/chrastil/lab/users/rob/scripts/MLINDIV/OldVersions/
 # Rob's output data is now in /mnt/chrastil/lab/data/MLINDIV/raw/raw_behav/OldVersions/
 
 # set working directory here to where the full csv file is located along with the location and dista
-working_dir <- "/mnt/chrastil/lab/data/MLINDIV/raw/raw_behav/"
-setwd(working_dir)
+# setwd("/mnt/chrastil/lab/users/alina") # use personal working directory (instead of the row below) to test changes
+setwd("/mnt/chrastil/lab/data/MLINDIV/preprocessed/behavioral")
 
 
 full_file <- read.csv("MLINDIV_behavioral_full.csv")
@@ -253,8 +256,12 @@ trial_full <- data.frame(Subject = Subject, eprocs = eprocs, Task_type = Task_ty
                            getready_rttime = GetReady.RTTime, iti_onset = ITI.OnsetTime, startat_onset = StartAt.OnsetTime, goal_onset = Goal.OnsetTime, session_time = Session_time
                            )
 
+
+working_dir <- "/mnt/chrastil/lab/data/MLINDIV/raw/raw_behav"
+setwd(working_dir)
+
 dtable <- read.csv("distancetable.csv")
-dtable[30,1] <- "P"
+dtable[30, 1] <- "P"
 dtable[44, 1] <- "P"
 colnames(dtable)[1] <- "StartAt"
 colnames(dtable)[2] <- "end_location"
@@ -263,4 +270,14 @@ t <- join(trial_full, dtable, by = c("StartAt", "end_location"))
 
 t <- t %>% mutate(fmv_duration = trial_endtime - final_movevid_OT)
 
-write.csv(t, "MLINDIV_trial_full.csv")
+#### 
+
+# Recoding wayfinding trials that were supposed to end at N but actually ended at F facing south as true, as they are close enough to being true. 
+# Likewise, recoding trials that were supposed to end at Y but actually ended at V facing east as true. 
+recode_trials_1 <- which(t$Procedure == 'TrialProc' & t$EndAt == 'N' & t$end_location =='F' & t$end_rotation =='S') # finding rows satisfying first condition 
+recode_trials_2 <- which(t$Procedure == 'TrialProc' & t$EndAt == 'Y' & t$end_location =='V' & t$end_rotation =='E') # finding rows satisfying second condition
+recode_trials <- append(recode_trials_1, recode_trials_2) # combining into one list
+t[recode_trials,16] <- "TRUE" # recoding these trials to TRUE 
+
+# write.csv(t, file.path("/mnt/chrastil/lab/users/alina", "MLINDIV_trial_full.csv")) # use personal working directory (instead of the row below) to test changes
+write.csv(t, file.path("/mnt/chrastil/lab/data/MLINDIV/preprocessed/behavioral", "MLINDIV_trial_full.csv"))
