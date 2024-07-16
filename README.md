@@ -26,7 +26,6 @@ Maze Learning - Individual Differences (MLINDIV) is an expansive project that em
    * Feature-Weight Mapping
 
 ## 6. [**Hippocampal Subfields**](https://github.com/spatialneuroscience/MLINDIV/tree/main/Hippocampal_Subfields)
-   * [Segmentation](https://github.com/spatialneuroscience/MLINDIV/tree/main/Hippocampal_Subfields/Segmentation)
    * [Structural Analysis](https://github.com/spatialneuroscience/MLINDIV/tree/main/Hippocampal_Subfields/Structural_Analysis)
 
 ## 7. **Diffusion Spectral Imaging**
