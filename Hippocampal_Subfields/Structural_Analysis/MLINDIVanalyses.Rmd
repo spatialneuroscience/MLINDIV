@@ -319,7 +319,7 @@ data_tiv$CaitTIV <- data_tiv$CaitTIV/1000 # Divide Caitlin's values by 1000 to m
 data_hrT2 <- read_excel("ASHS_volumes.xlsx", sheet = 1) 
   hres_sub_id <- c(81:83, 85, 86, 88, 89, 92:96, 98:103, 106:113)
   names(data_hrT2)[names(data_hrT2) == "Spatial Neuro ID"] <- "sub_id"
-raw_vol_full <- as_tibble(read.csv("subfield_vol/raw_vol_full.csv")) # FINAL volumes
+raw_vol_full <- as_tibble(read.csv("raw_vol_full.csv")) # FINAL volumes
 data_hrT2[,2:15] <- raw_vol_full[,3:16] # Replace data with FINAL volumes
 data_hrT2 <- merge(data_hrT2[,c(1:31,35:36)], data_nav_measures, by = "sub_id")
 
@@ -329,7 +329,7 @@ data_cut <- data_hrT2[-c(post_cutoff),] # n=14, 7 subfield volumes with no poste
 ## Volume measures and slice counts from high-res T2 HC scans (body only)
 data_HCbody <- read_excel("ASHS_volumes.xlsx", sheet = 2) 
   names(data_HCbody)[names(data_HCbody) == "Spatial Neuro ID"] <- "sub_id"
-body_vol_full <- as_tibble(read.csv("subfield_vol/body_vol_full.csv"))
+body_vol_full <- as_tibble(read.csv("body_vol_full.csv"))
 data_HCbody[,2:13] <- body_vol_full[,3:14]
 data_HCbody <- merge(data_HCbody[,c(1:29,33:34)], data_nav_measures, by = "sub_id")
 
@@ -344,7 +344,7 @@ data_regT2 <- merge(data_regT2[,c(1:39,43:44)], data_nav_measures, by = "sub_id"
 ## Volume measures and slice counts from low-res T1 whole-brain scans (all participants)
 data_total_vol <- read_excel("ASHS_volumes.xlsx", sheet = 4) 
   data_total_vol$sub_id <- as.integer(data_total_vol$sub_id)
-antpost_vol_full <- read.csv("antpost_vol/antpost_vol_full.csv")
+antpost_vol_full <- read.csv("antpost_vol_full.csv")
 data_total_vol <- merge(data_total_vol[,c(1,4,9,11,14,19,21)], antpost_vol_full, by = "sub_id")
 data_total_vol <- data_total_vol %>% 
   select("sub_id", "LHC_vol", "sLHC", "LaHC_vol", "sLaHC", "LpHC_vol", "sLpHC", 
